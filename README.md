@@ -9,7 +9,9 @@ A parallel FFmpeg pipeline and web editor that detects retakes in raw talking-he
 
 ## ⚡ Measured Benchmark Results
 
-Tested on a **5 minute 22 second** raw talking-head clip (1080p @ 30fps, 45 timeline cuts).  
+![TakePicker Benchmark Scaling Chart](docs/screenshots/00_benchmark_chart.png)
+
+Tested on a **5 minute 22 second** clip assembled from test recordings with intentional retakes (1080p @ 30fps, 45 timeline cuts).  
 **Hardware:** Intel Core i7-8700 (6 physical cores, 12 threads @ 3.20GHz, 16GB RAM).  
 **Worker configuration:** BullMQ worker pool, each worker constrained to 2 FFmpeg threads (`-threads 2`).
 
@@ -53,13 +55,13 @@ docker kill takepicker-render-worker-1
 # Status transitioned from QUEUED -> MERGING -> DONE in 60s
 ```
 
-**Result:** The parent merge job never ran prematurely. Worker 2 completed all orphaned segments, and `final.mp4` was generated cleanly with zero corrupted frames.
+**Result:** The parent merge job never ran prematurely. Worker 2 completed all orphaned segments, and the export completed cleanly.
 
 ---
 
-## 🎯 Retake Detection Accuracy (Hand-Counted Evaluation)
+## 🎯 Retake Detection Evaluation
 
-Instead of relying on heuristic scores as "accuracy", I evaluated TakePicker across 3 test clips with hand-counted ground truth stumbles:
+Evaluated on my own test clips (small sample, indicative rather than conclusive) with hand-counted ground truth stumbles:
 
 | Test Clip | Description | Ground Truth Retake Groups | Groups Detected | Matched Preferred Take |
 |:---|:---|:---:|:---:|:---:|
@@ -111,7 +113,7 @@ Instead of relying on heuristic scores as "accuracy", I evaluated TakePicker acr
 
 ### Prerequisites
 - Docker & Docker Compose
-- Any modern laptop (tested on 6-core Intel i7 and AMD Ryzen 5, 8GB+ RAM)
+- Any modern multi-core machine with Docker (tested on 6-core Intel i7-8700, 16GB RAM)
 
 ```bash
 # 1. Clone the repository
