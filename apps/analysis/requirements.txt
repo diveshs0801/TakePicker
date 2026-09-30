@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+faster-whisper
+sentence-transformers
+rapidfuzz
+numpy

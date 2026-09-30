@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tmp.mp4
+.env
+.env*.local
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Media storage
+media/
+samples/*.mp4
+!samples/.gitkeep
+
+# IDE & OS
+.DS_Store
+.vscode/
+.idea/

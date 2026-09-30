@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: tp
+      POSTGRES_PASSWORD: tp
+      POSTGRES_DB: takepicker
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  analysis:
+    build: ./apps/analysis
+    environment:
+      WHISPER_MODEL: small
+    volumes: [media:/media]
+    ports: ["8000:8000"]
+
+  ingest-worker:
+    build:
+      context: .
+      dockerfile: apps/workers/Dockerfile
+    command: ["node", "dist/apps/workers/src/ingest.js"]
+    environment: &worker_env
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://tp:tp@postgres:5432/takepicker
+      MEDIA_DIR: /media
+      ANALYSIS_URL: http://analysis:8000
+    depends_on: [redis, postgres]
+    volumes: [media:/media]
+
+  render-worker:            # scale me: --scale render-worker=N
+    build:
+      context: .
+      dockerfile: apps/workers/Dockerfile
+    command: ["node", "dist/apps/workers/src/render.js"]
+    environment:
+      <<: *worker_env
+      FFMPEG_THREADS: "2"
+    depends_on: [redis, postgres]
+    volumes: [media:/media]
+
+volumes:
+  pgdata:
+  media:
