@@ -4,3 +4,6 @@ faster-whisper
 sentence-transformers
 rapidfuzz
 numpy
+scipy
+httpx
+python-multipart
