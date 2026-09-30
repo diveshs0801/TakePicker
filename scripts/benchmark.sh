@@ -22,7 +22,9 @@ echo "=========================================================="
 
 BASELINE=0
 
-for N in 1 2 4 8; do
+SUMMARY_TABLE="| Workers | Duration | Speedup |\n|:---:|:---:|:---:|\n"
+
+for N in 1 2 4 6; do
   echo ""
   echo "-> Scaling render-worker to $N worker(s)..."
   docker compose up -d --scale render-worker=$N render-worker >/dev/null 2>&1
@@ -49,7 +51,7 @@ for N in 1 2 4 8; do
       echo "Error: Render $RENDER_ID failed."
       exit 1
     fi
-    sleep 0.4
+    sleep 0.3
   done
 
   END=$(date +%s%N)
@@ -64,7 +66,14 @@ for N in 1 2 4 8; do
   fi
 
   echo "==> [Result] Workers: $N | Duration: ${DURATION_SEC}s | Speedup: $SPEEDUP"
+  SUMMARY_TABLE+="${N} | ${DURATION_SEC}s | ${SPEEDUP}\n"
 done
+
+echo ""
+echo "=========================================================="
+echo " Benchmark Summary Table"
+echo "=========================================================="
+printf "$SUMMARY_TABLE"
 
 echo ""
 echo "Benchmark completed successfully."
