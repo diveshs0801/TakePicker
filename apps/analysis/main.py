@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import os
 import re
+import uuid
 import numpy as np
 from rapidfuzz import fuzz
 
@@ -306,7 +307,7 @@ def analyze(req: AnalyzeReq):
     timeline_clips = []
 
     for group_idx, seg_indices in enumerate(clusters):
-        group_id = f"g_{group_idx + 1}"
+        group_id = str(uuid.uuid4())
         group_size = len(seg_indices)
         scored_takes = []
 

@@ -113,7 +113,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         boxShadow: '0 20px 48px rgba(0, 0, 0, 0.6)',
       }}>
         {/* Close Button */}
-        {!isUploading && (
+        {(!isUploading || currentStatus === 'FAILED') && (
           <button
             onClick={onClose}
             style={{
@@ -218,7 +218,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '12px 0' }}>
             {stages.map((stage, idx) => {
               const isPast = activeIdx > idx;
-              const isCurrent = activeIdx === idx;
+              const isCurrent = activeIdx === idx && currentStatus !== 'FAILED';
 
               return (
                 <div key={stage.key} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -244,6 +244,42 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 </div>
               );
             })}
+
+            {currentStatus === 'FAILED' && (
+              <div style={{
+                marginTop: '12px',
+                padding: '12px',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  <AlertCircle size={18} />
+                  <span>Processing failed. Please ensure the video has speech and is H.264/MP4 format.</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsUploading(false);
+                    setError(null);
+                  }}
+                  style={{
+                    alignSelf: 'flex-start',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Upload Another Video
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

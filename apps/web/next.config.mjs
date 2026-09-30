@@ -13,6 +13,10 @@ const nextConfig = {
         source: '/media/:path*',
         destination: `${apiBase}/media/:path*`,
       },
+      {
+        source: '/socket.io/:path*',
+        destination: `${apiBase}/socket.io/:path*`,
+      },
     ];
   },
 };

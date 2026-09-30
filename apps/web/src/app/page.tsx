@@ -73,7 +73,11 @@ export default function Home() {
   useEffect(() => {
     if (!currentAsset?.id) return;
 
-    const socket: Socket = io('/', { path: '/socket.io' });
+    const socketUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000';
+    const socket: Socket = io(socketUrl, { transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => {
       socket.emit('join:asset', { assetId: currentAsset.id });
@@ -86,6 +90,7 @@ export default function Home() {
 
         if (data.status === 'READY') {
           loadAsset(data.assetId);
+          setIsUploadOpen(false);
         }
       }
     });
@@ -94,6 +99,31 @@ export default function Home() {
       socket.disconnect();
     };
   }, [currentAsset?.id]);
+
+  // Polling fallback to guarantee stage progression updates
+  useEffect(() => {
+    if (!currentAsset?.id || activeAssetStatus === 'READY' || activeAssetStatus === 'FAILED') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/assets/${currentAsset.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setActiveAssetStatus(data.status);
+          setCurrentAsset(data);
+
+          if (data.status === 'READY') {
+            loadAsset(data.id);
+            setIsUploadOpen(false);
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [currentAsset?.id, activeAssetStatus]);
 
   // Handle take selection change
   const handleSelectTake = async (groupId: string, segmentId: string | number) => {

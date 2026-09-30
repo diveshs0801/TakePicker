@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS transcripts (
 
 -- 4. Take groups (retake clusters)
 CREATE TABLE IF NOT EXISTS take_groups (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                  TEXT PRIMARY KEY,
   asset_id            UUID REFERENCES assets(id) ON DELETE CASCADE,
   idx                 INT NOT NULL,
   chosen_segment_id   UUID,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS segments (
   text          TEXT NOT NULL,
   features      JSONB,         -- feature breakdown { wpm, fillers, pauses, audio_stability }
   score         FLOAT,
-  group_id      UUID REFERENCES take_groups(id) ON DELETE SET NULL,
+  group_id      TEXT REFERENCES take_groups(id) ON DELETE SET NULL,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
