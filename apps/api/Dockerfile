@@ -7,4 +7,4 @@ COPY apps/api ./apps/api
 RUN cd apps/api && npx tsc
 WORKDIR /app/apps/api
 EXPOSE 3000
-CMD ["node", "dist/src/main.js"]
+CMD ["sh", "-c", "node dist/apps/api/src/main.js 2>/dev/null || node dist/src/main.js"]
