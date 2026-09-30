@@ -43,7 +43,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   useEffect(() => {
     if (!renderId) return;
 
-    const socket: Socket = io('/', { path: '/socket.io' });
+    const socketUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000';
+    const socket: Socket = io(socketUrl, { transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => {
       socket.emit('join:render', { renderId });
@@ -79,6 +83,39 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       socket.disconnect();
     };
   }, [renderId]);
+
+  // Polling fallback to guarantee completion detection
+  useEffect(() => {
+    if (!renderId || status === 'DONE' || status === 'FAILED') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/renders/${renderId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'MERGING') {
+            setStatus('MERGING');
+          } else if (data.status === 'DONE') {
+            setStatus('DONE');
+            setOutputUrl(data.outputUrl || `/media/renders/${renderId}/final.mp4`);
+            // Mark all segments done
+            const allDone: Record<number, number> = {};
+            clips.forEach((_, idx) => {
+              allDone[idx] = 100;
+            });
+            setSegmentProgress(allDone);
+          } else if (data.status === 'FAILED') {
+            setStatus('FAILED');
+            setError('Render failed on worker pool');
+          }
+        }
+      } catch (err) {
+        console.error('Render polling error:', err);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [renderId, status, clips]);
 
   if (!isOpen) return null;
 
