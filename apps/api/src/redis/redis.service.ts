@@ -1,15 +1,15 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import IORedis from 'ioredis';
 import { Queue, FlowProducer } from 'bullmq';
 
 @Injectable()
-export class RedisService implements OnModuleInit, OnModuleDestroy {
+export class RedisService implements OnModuleDestroy {
   private client: IORedis;
   private subscriber: IORedis;
   private ingestQueue: Queue;
   private flowProducer: FlowProducer;
 
-  onModuleInit() {
+  constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://redis:6379';
     this.client = new IORedis(redisUrl, { maxRetriesPerRequest: null });
     this.subscriber = new IORedis(redisUrl, { maxRetriesPerRequest: null });

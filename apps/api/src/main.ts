@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use('/media', express.static(mediaDir, { acceptRanges: true }));
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`[TakePicker API] Server running on http://localhost:${port}`);
 }
 

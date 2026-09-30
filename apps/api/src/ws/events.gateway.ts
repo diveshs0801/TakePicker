@@ -23,7 +23,11 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   constructor(private readonly redisService: RedisService) {}
 
   afterInit() {
-    const subscriber = this.redisService.getSubscriber();
+    const subscriber = this.redisService?.getSubscriber();
+    if (!subscriber) {
+      console.warn('[WebSocket] Redis subscriber not ready during afterInit');
+      return;
+    }
 
     // Subscribe to all relevant Redis channels
     subscriber.subscribe('asset-events', 'render-progress', 'render-done');

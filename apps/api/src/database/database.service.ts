@@ -1,11 +1,11 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 
 @Injectable()
-export class DatabaseService implements OnModuleInit, OnModuleDestroy {
+export class DatabaseService implements OnModuleDestroy {
   private pool: Pool;
 
-  onModuleInit() {
+  constructor() {
     this.pool = new Pool({
       connectionString: process.env.DATABASE_URL || 'postgres://tp:tp@postgres:5432/takepicker',
     });
