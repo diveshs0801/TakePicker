@@ -1,13 +1,14 @@
-'use client';
-
 import React from 'react';
-import { UploadCloud, Film, PlayCircle, Zap, Cpu } from 'lucide-react';
+import Link from 'next/link';
+import { UploadCloud, Film, PlayCircle, Zap, Cpu, BookOpen, Sparkles, Play } from 'lucide-react';
 import type { Asset } from '../../../../packages/contracts';
 
 interface HeaderProps {
   currentAsset: Asset | null;
   onOpenUpload: () => void;
   onOpenExport: () => void;
+  onOpenGuide: () => void;
+  onLoadDemoAsset: () => void;
   isReadyToExport: boolean;
 }
 
@@ -15,6 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   currentAsset,
   onOpenUpload,
   onOpenExport,
+  onOpenGuide,
+  onLoadDemoAsset,
   isReadyToExport,
 }) => {
   return (
@@ -97,7 +100,57 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <Link
+          href="/guide"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 15px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(99, 102, 241, 0.15)',
+            border: '1px solid rgba(99, 102, 241, 0.4)',
+            color: '#a5b4fc',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            textDecoration: 'none',
+            transition: 'all 0.2s',
+          }}
+        >
+          <BookOpen size={16} color="#818cf8" />
+          <span>Guide & Architecture</span>
+        </Link>
+
+        <button
+          onClick={onLoadDemoAsset}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 15px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(34, 197, 94, 0.12)',
+            border: '1px solid rgba(34, 197, 94, 0.35)',
+            color: '#86efac',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.22)';
+            e.currentTarget.style.borderColor = '#4ade80';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.12)';
+            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.35)';
+          }}
+        >
+          <Play size={15} fill="#4ade80" color="#4ade80" />
+          <span>Demo Video</span>
+        </button>
+
         <button
           onClick={onOpenUpload}
           style={{

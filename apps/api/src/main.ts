@@ -8,7 +8,19 @@ async function bootstrap() {
 
   app.enableCors({
     origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: '*',
+    exposedHeaders: [
+      'Location',
+      'Upload-Offset',
+      'Upload-Length',
+      'Tus-Resumable',
+      'Tus-Version',
+      'Tus-Extension',
+      'Tus-Max-Size',
+      'Upload-Metadata',
+      'Upload-Checksum',
+    ],
     credentials: true,
   });
 

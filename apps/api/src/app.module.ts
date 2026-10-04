@@ -7,6 +7,7 @@ import { RendersModule } from './renders/renders.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { ToolsModule } from './tools/tools.module';
 import { AgentModule } from './agent/agent.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AgentModule } from './agent/agent.module';
     TimelineModule,
     ToolsModule,
     AgentModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

@@ -22,6 +22,8 @@ from checks.black_frames import parse_black_frames
 from checks.frozen_video import parse_frozen_video
 from checks.audio_dropout import parse_audio_dropout
 from checks.loudness_jump import parse_loudness_jump
+from checks.av_sync import check_av_sync
+from checks.word_cutoff import check_word_cutoffs
 
 
 def load_config(config_path: str = None) -> dict:
@@ -181,6 +183,32 @@ def run_lint(filepath: str, config: dict,
         )
         if not overlaps_dropout:
             findings.append(lf)
+
+    # D5: A/V Sync check
+    av_sync_finding = check_av_sync(filepath)
+    if av_sync_finding:
+        findings.append({
+            "check": "D5_av_desync",
+            "severity": "warn" if av_sync_finding["offset_ms"] < 100 else "error",
+            "start": 0.0,
+            "end": 0.0,
+            "message": av_sync_finding["message"],
+            "suggestedFix": {"action": "shift_audio", "offset_ms": av_sync_finding["offset_ms"]}
+        })
+
+    # D7: Word cutoff check (if timeline and words are available)
+    if timeline and words:
+        segments = timeline.get("segments", timeline.get("clips", []))
+        cutoff_findings = check_word_cutoffs(segments, words)
+        for cf in cutoff_findings:
+            findings.append({
+                "check": "D7_word_cutoff",
+                "severity": "error",
+                "start": cf["time"],
+                "end": cf["time"],
+                "message": f"Boundary cut inside spoken word '{cf['word']}' at {cf['time']}s",
+                "suggestedFix": {"action": "snap_to_word_boundary", "target_time": cf["word_start"]}
+            })
 
     return findings
 

@@ -8,6 +8,7 @@ import { RetakeInspector } from '../components/RetakeInspector';
 import { UploadModal } from '../components/UploadModal';
 import { ExportModal } from '../components/ExportModal';
 import { AgentPanel } from '../components/AgentPanel';
+import { SystemGuideModal } from '../components/SystemGuideModal';
 import { io, Socket } from 'socket.io-client';
 import type { Asset, TakeGroup, Timeline, AssetStatus } from '../../../../packages/contracts';
 
@@ -19,6 +20,7 @@ export default function Home() {
 
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
+  const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [activeAssetStatus, setActiveAssetStatus] = useState<AssetStatus>('READY');
   const [rightPanelTab, setRightPanelTab] = useState<'agent' | 'retakes'>('agent');
 
@@ -53,6 +55,12 @@ export default function Home() {
     }
   };
 
+  const DEMO_ASSET_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+  const loadDemoAsset = () => {
+    loadAsset(DEMO_ASSET_ID);
+  };
+
   // Initial load
   useEffect(() => {
     const fetchRecent = async () => {
@@ -62,10 +70,13 @@ export default function Home() {
           const list = await res.json();
           if (list && list.length > 0) {
             loadAsset(list[0].id);
+          } else {
+            loadAsset(DEMO_ASSET_ID);
           }
         }
       } catch (err) {
         console.error('Failed to list assets:', err);
+        loadAsset(DEMO_ASSET_ID);
       }
     };
     fetchRecent();
@@ -184,6 +195,8 @@ export default function Home() {
         currentAsset={currentAsset}
         onOpenUpload={() => setIsUploadOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
+        onLoadDemoAsset={loadDemoAsset}
         isReadyToExport={currentAsset?.status === 'READY' && (timeline?.clips.length || 0) > 0}
       />
 
@@ -214,40 +227,50 @@ export default function Home() {
 
         {/* Right Column: Agent & Retakes Inspector */}
         <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', background: 'rgba(0, 0, 0, 0.25)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
             <button
               onClick={() => setRightPanelTab('agent')}
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                borderRadius: '8px',
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-sm)',
                 border: 'none',
-                backgroundColor: rightPanelTab === 'agent' ? '#2563eb' : '#27272a',
-                color: '#ffffff',
+                background: rightPanelTab === 'agent' ? 'var(--accent-gradient)' : 'transparent',
+                color: rightPanelTab === 'agent' ? '#ffffff' : 'var(--text-muted)',
                 fontWeight: 600,
-                fontSize: '13px',
+                fontSize: '0.85rem',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
+                boxShadow: rightPanelTab === 'agent' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
             >
-              🤖 AI Editor Agent
+              <span>🤖 AI Editor Agent</span>
             </button>
             <button
               onClick={() => setRightPanelTab('retakes')}
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                borderRadius: '8px',
+                padding: '9px 12px',
+                borderRadius: 'var(--radius-sm)',
                 border: 'none',
-                backgroundColor: rightPanelTab === 'retakes' ? '#2563eb' : '#27272a',
-                color: '#ffffff',
+                background: rightPanelTab === 'retakes' ? 'var(--accent-gradient)' : 'transparent',
+                color: rightPanelTab === 'retakes' ? '#ffffff' : 'var(--text-muted)',
                 fontWeight: 600,
-                fontSize: '13px',
+                fontSize: '0.85rem',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
+                boxShadow: rightPanelTab === 'retakes' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
             >
-              ✂ Retake Inspector
+              <span>✂ Retake Inspector</span>
             </button>
           </div>
 
@@ -284,6 +307,12 @@ export default function Home() {
         onClose={() => setIsExportOpen(false)}
         assetId={currentAsset?.id || null}
         timeline={timeline}
+      />
+
+      <SystemGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
+        onLoadDemoAsset={loadDemoAsset}
       />
     </div>
   );
