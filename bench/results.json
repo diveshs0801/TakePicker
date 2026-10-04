@@ -1,0 +1,119 @@
+{
+  "per_type": {
+    "D1": {
+      "tp": 12,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "D2": {
+      "tp": 6,
+      "fn": 3,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 0.667,
+      "f1": 0.8
+    },
+    "D3": {
+      "tp": 9,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "D4": {
+      "tp": 1,
+      "fn": 8,
+      "fp": 3,
+      "precision": 0.25,
+      "recall": 0.111,
+      "f1": 0.154
+    }
+  },
+  "per_type_severity": {
+    "D1": {
+      "0.1s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      },
+      "0.25s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      },
+      "0.5s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      },
+      "1.0s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      }
+    },
+    "D2": {
+      "0.5s": {
+        "tp": 2,
+        "fn": 1,
+        "recall": 0.667
+      },
+      "1.0s": {
+        "tp": 2,
+        "fn": 1,
+        "recall": 0.667
+      },
+      "2.0s": {
+        "tp": 2,
+        "fn": 1,
+        "recall": 0.667
+      }
+    },
+    "D3": {
+      "0.1s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      },
+      "0.3s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      },
+      "1.0s": {
+        "tp": 3,
+        "fn": 0,
+        "recall": 1.0
+      }
+    },
+    "D4": {
+      "+10dB": {
+        "tp": 1,
+        "fn": 2,
+        "recall": 0.333
+      },
+      "+3dB": {
+        "tp": 0,
+        "fn": 3,
+        "recall": 0.0
+      },
+      "+6dB": {
+        "tp": 0,
+        "fn": 3,
+        "recall": 0.0
+      }
+    }
+  },
+  "false_alarms_per_minute": 0.0,
+  "median_localization_error": {
+    "D1": 0.02,
+    "D2": 0.015,
+    "D3": 0.012,
+    "D4": 0.024
+  },
+  "lint_speed_x_median": 0.023
+}

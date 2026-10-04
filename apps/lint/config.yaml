@@ -1,0 +1,30 @@
+# Video Linter Detection Thresholds
+# Tune these on the dev split, evaluate once on the test split.
+
+black_frames:
+  pic_th: 0.98          # pixel threshold: fraction of pixels that must be black
+  min_duration: 0.05    # minimum black span (seconds) to flag
+
+frozen_video:
+  noise_db: -60         # freezedetect noise floor
+  min_duration: 0.4     # minimum freeze span (seconds) to flag
+
+audio_dropout:
+  noise_db: -50         # silencedetect noise floor
+  min_duration: 0.08    # minimum silence span (seconds) to flag
+  require_speech_context: true  # only flag if inside a speech span
+
+loudness_jump:
+  window_sec: 1.0       # sliding window for momentary loudness
+  threshold_lu: 4.0     # flag if adjacent windows differ by more than this (LUFS)
+
+av_desync:
+  max_offset_ms: 500    # maximum lag to search
+  min_detectable_ms: 80 # offsets below this are unreliable (state in README)
+
+click_pop:
+  window_ms: 10         # analysis window around join points
+  energy_ratio: 3.0     # flag if high-freq energy ratio exceeds this
+
+word_cutoff:
+  boundary_tolerance_ms: 50  # a word is "cut" if boundary is > this far inside it
