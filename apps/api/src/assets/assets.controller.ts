@@ -53,4 +53,10 @@ export class AssetsController {
   async getTimeline(@Param('id') id: string) {
     return this.assetsService.getTimeline(id);
   }
+
+  @Get(':id/lint')
+  async getLint(@Param('id') id: string) {
+    return this.assetsService.lintAsset(id);
+  }
 }
+

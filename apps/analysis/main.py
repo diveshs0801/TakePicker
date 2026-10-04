@@ -385,3 +385,27 @@ def analyze(req: AnalyzeReq):
         "groups": output_groups,
         "timeline": timeline
     }
+
+class LintRequest(BaseModel):
+    assetId: str
+    srcPath: str
+    timeline: Optional[Dict[str, Any]] = None
+    words: Optional[List[Dict[str, Any]]] = None
+
+@app.post("/lint")
+def lint_asset(req: LintRequest):
+    if not os.path.exists(req.srcPath):
+        raise HTTPException(status_code=404, detail=f"Source video not found: {req.srcPath}")
+
+    try:
+        from lint.lint import run_lint, load_config
+        config = load_config()
+        findings = run_lint(req.srcPath, config, words=req.words, timeline=req.timeline)
+        return {
+            "assetId": req.assetId,
+            "findings": findings,
+            "count": len(findings)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

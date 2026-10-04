@@ -247,6 +247,7 @@ export default function Home() {
               totalDuration={currentAsset?.duration || 20.0}
               currentTime={currentTime}
               onSeek={handleSeek}
+              assetId={currentAsset?.id}
             />
           </div>
 

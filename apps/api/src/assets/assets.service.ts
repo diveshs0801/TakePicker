@@ -209,4 +209,30 @@ export class AssetsService {
       clips,
     };
   }
+
+  async lintAsset(id: string) {
+    const asset = await this.getAsset(id);
+    const transcript = await this.getTranscript(id);
+    const timeline = await this.getTimeline(id);
+
+    const analysisUrl = process.env.ANALYSIS_URL || 'http://analysis:8000';
+    const res = await fetch(`${analysisUrl}/lint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assetId: id,
+        srcPath: path.join(MEDIA, asset.storage_key),
+        words: transcript.words,
+        timeline,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new BadRequestException(`Linter failed: ${errText}`);
+    }
+
+    return res.json();
+  }
 }
+

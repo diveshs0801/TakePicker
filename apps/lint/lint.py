@@ -18,12 +18,20 @@ from pathlib import Path
 
 import yaml
 
-from checks.black_frames import parse_black_frames
-from checks.frozen_video import parse_frozen_video
-from checks.audio_dropout import parse_audio_dropout
-from checks.loudness_jump import parse_loudness_jump
-from checks.av_sync import check_av_sync
-from checks.word_cutoff import check_word_cutoffs
+try:
+    from checks.black_frames import parse_black_frames
+    from checks.frozen_video import parse_frozen_video
+    from checks.audio_dropout import parse_audio_dropout
+    from checks.loudness_jump import parse_loudness_jump
+    from checks.av_sync import check_av_sync
+    from checks.word_cutoff import check_word_cutoffs
+except ImportError:
+    from lint.checks.black_frames import parse_black_frames
+    from lint.checks.frozen_video import parse_frozen_video
+    from lint.checks.audio_dropout import parse_audio_dropout
+    from lint.checks.loudness_jump import parse_loudness_jump
+    from lint.checks.av_sync import check_av_sync
+    from lint.checks.word_cutoff import check_word_cutoffs
 
 
 def load_config(config_path: str = None) -> dict:

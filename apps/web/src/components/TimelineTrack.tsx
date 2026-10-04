@@ -23,6 +23,7 @@ interface TimelineTrackProps {
   currentTime: number;
   onSeek: (time: number) => void;
   activeClipId?: string;
+  assetId?: string;
 }
 
 export const TimelineTrack: React.FC<TimelineTrackProps> = ({
@@ -31,12 +32,33 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
   currentTime,
   onSeek,
   activeClipId,
+  assetId,
 }) => {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [snapEnabled, setSnapEnabled] = useState<boolean>(true);
   const [activeTool, setActiveTool] = useState<'select' | 'cut'>('select');
+  const [lintFindings, setLintFindings] = useState<any[]>([]);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [hasScanned, setHasScanned] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  const handleScanDefects = async () => {
+    if (!assetId) return;
+    setIsScanning(true);
+    try {
+      const res = await fetch(`/api/assets/${assetId}/lint`);
+      if (res.ok) {
+        const data = await res.json();
+        setLintFindings(data.findings || []);
+        setHasScanned(true);
+      }
+    } catch (e) {
+      console.error('Linter scan failed:', e);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   if (!timeline || totalDuration <= 0) {
     return (
@@ -172,6 +194,50 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
             <Magnet size={13} />
             <span>Snap {snapEnabled ? 'ON' : 'OFF'}</span>
           </button>
+
+          <div style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.1)', margin: '0 4px' }} />
+
+          {/* Linter Defect Scan Button */}
+          <button
+            type="button"
+            onClick={handleScanDefects}
+            disabled={isScanning || !assetId}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '5px 10px',
+              borderRadius: 'var(--radius-sm)',
+              background: hasScanned
+                ? lintFindings.length > 0
+                  ? 'rgba(239, 68, 68, 0.18)'
+                  : 'rgba(16, 185, 129, 0.18)'
+                : 'rgba(245, 158, 11, 0.15)',
+              border: hasScanned
+                ? lintFindings.length > 0
+                  ? '1px solid rgba(239, 68, 68, 0.4)'
+                  : '1px solid rgba(16, 185, 129, 0.4)'
+                : '1px solid rgba(245, 158, 11, 0.4)',
+              color: hasScanned
+                ? lintFindings.length > 0
+                  ? '#fca5a5'
+                  : '#86efac'
+                : '#fcd34d',
+              cursor: isScanning || !assetId ? 'wait' : 'pointer',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+            }}
+          >
+            <ShieldAlert size={13} />
+            <span>
+              {isScanning
+                ? 'Auditing (D1-D7)...'
+                : hasScanned
+                ? `${lintFindings.length} Defects Found`
+                : 'Scan Quality (D1-D7)'}
+            </span>
+          </button>
         </div>
 
         {/* Center: Efficiency Stats */}
@@ -270,6 +336,7 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
           {/* S1 Speech Takes Header */}
           <div style={{
             height: '44px',
+            borderBottom: '1px solid var(--border-color)',
             padding: '0 10px',
             display: 'flex',
             alignItems: 'center',
@@ -277,6 +344,20 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
           }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981' }}>S1 Speech</span>
             <Sparkles size={12} color="#10b981" />
+          </div>
+
+          {/* Q1 Defects Header */}
+          <div style={{
+            height: '38px',
+            padding: '0 10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b' }}>Q1 Defects</span>
+            <span className="badge" style={{ fontSize: '0.62rem', padding: '1px 5px', background: 'rgba(245, 158, 11, 0.15)', color: '#fcd34d' }}>
+              {hasScanned ? lintFindings.length : 0}
+            </span>
           </div>
         </div>
 
@@ -445,6 +526,55 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
                   >
                     <span style={{ fontSize: '0.68rem', color: '#6ee7b7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       "{clip.text || 'Clean delivery'}"
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 2E. Track Q1: Quality Defects */}
+            <div style={{
+              height: '38px',
+              backgroundColor: '#0a0c14',
+              borderTop: '1px solid var(--border-color)',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              {hasScanned && lintFindings.length === 0 && (
+                <div style={{ paddingLeft: '14px', fontSize: '0.72rem', color: '#86efac', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>✓ 0 Technical Defects Detected (Broadcast Clean)</span>
+                </div>
+              )}
+              {lintFindings.map((finding, idx) => {
+                const leftPct = (finding.start / totalDuration) * 100;
+                const widthPct = Math.max(1.5, ((finding.end - finding.start) / totalDuration) * 100);
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSeek(finding.start);
+                    }}
+                    title={`Click to jump to ${finding.check}: ${finding.message}`}
+                    style={{
+                      position: 'absolute',
+                      left: `${leftPct}%`,
+                      width: `${widthPct}%`,
+                      height: '24px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.25)',
+                      border: '1px solid #ef4444',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 4px',
+                      zIndex: 10,
+                    }}
+                  >
+                    <span style={{ fontSize: '0.65rem', color: '#fca5a5', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      ⚠ {finding.check}
                     </span>
                   </div>
                 );
