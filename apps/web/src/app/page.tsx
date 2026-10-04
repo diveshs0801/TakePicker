@@ -9,10 +9,13 @@ import { UploadModal } from '../components/UploadModal';
 import { ExportModal } from '../components/ExportModal';
 import { AgentPanel } from '../components/AgentPanel';
 import { SystemGuideModal } from '../components/SystemGuideModal';
+import { ProjectHub } from '../components/ProjectHub';
 import { io, Socket } from 'socket.io-client';
 import type { Asset, TakeGroup, Timeline, AssetStatus } from '../../../../packages/contracts';
 
 export default function Home() {
+  const [currentView, setCurrentView] = useState<'studio' | 'hub'>('studio');
+  const [allAssets, setAllAssets] = useState<Asset[]>([]);
   const [currentAsset, setCurrentAsset] = useState<Asset | null>(null);
   const [groups, setGroups] = useState<TakeGroup[]>([]);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
@@ -25,6 +28,8 @@ export default function Home() {
   const [rightPanelTab, setRightPanelTab] = useState<'agent' | 'retakes'>('agent');
 
   const playerRef = useRef<VideoPlayerRef | null>(null);
+
+  const DEMO_ASSET_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
   // Fetch initial or recent asset
   const loadAsset = async (assetId: string) => {
@@ -55,31 +60,32 @@ export default function Home() {
     }
   };
 
-  const DEMO_ASSET_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-
   const loadDemoAsset = () => {
     loadAsset(DEMO_ASSET_ID);
+    setCurrentView('studio');
   };
 
-  // Initial load
-  useEffect(() => {
-    const fetchRecent = async () => {
-      try {
-        const res = await fetch('/api/assets');
-        if (res.ok) {
-          const list = await res.json();
-          if (list && list.length > 0) {
-            loadAsset(list[0].id);
-          } else {
-            loadAsset(DEMO_ASSET_ID);
-          }
+  // Initial load: fetch all assets
+  const fetchAllAssets = async () => {
+    try {
+      const res = await fetch('/api/assets');
+      if (res.ok) {
+        const list = await res.json();
+        setAllAssets(list || []);
+        if (list && list.length > 0) {
+          loadAsset(list[0].id);
+        } else {
+          loadAsset(DEMO_ASSET_ID);
         }
-      } catch (err) {
-        console.error('Failed to list assets:', err);
-        loadAsset(DEMO_ASSET_ID);
       }
-    };
-    fetchRecent();
+    } catch (err) {
+      console.error('Failed to list assets:', err);
+      loadAsset(DEMO_ASSET_ID);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllAssets();
   }, []);
 
   // WebSocket connection for real-time asset processing updates
@@ -103,6 +109,7 @@ export default function Home() {
 
         if (data.status === 'READY') {
           loadAsset(data.assetId);
+          fetchAllAssets();
           setIsUploadOpen(false);
         }
       }
@@ -127,6 +134,7 @@ export default function Home() {
 
           if (data.status === 'READY') {
             loadAsset(data.id);
+            fetchAllAssets();
             setIsUploadOpen(false);
           }
         }
@@ -158,15 +166,14 @@ export default function Home() {
       const res = await fetch(`/api/assets/take-groups/${groupId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chosenSegmentId: String(segmentId) }),
+        body: JSON.stringify({ segmentId }),
       });
 
       if (res.ok && currentAsset?.id) {
-        // Refetch timeline with new selection
-        const tlRes = await fetch(`/api/assets/${currentAsset.id}/timeline`);
-        if (tlRes.ok) {
-          const newTl = await tlRes.json();
-          setTimeline(newTl);
+        const timelineRes = await fetch(`/api/assets/${currentAsset.id}/timeline`);
+        if (timelineRes.ok) {
+          const data = await timelineRes.json();
+          setTimeline(data);
         }
       }
     } catch (err) {
@@ -175,126 +182,158 @@ export default function Home() {
   };
 
   const handleSeek = (time: number) => {
+    setCurrentTime(time);
     playerRef.current?.seekTo(time);
   };
 
-  const handleUploadSuccess = (newAssetId: string) => {
-    setCurrentAsset({
-      id: newAssetId,
-      filename: 'Processing...',
-      storageKey: `assets/${newAssetId}/source.mp4`,
-      status: 'UPLOADED',
-      createdAt: new Date().toISOString(),
-    });
+  const handleUploadSuccess = (assetId: string) => {
+    loadAsset(assetId);
+    fetchAllAssets();
     setActiveAssetStatus('UPLOADED');
   };
 
+  const videoSourceUrl = currentAsset?.storageKey
+    ? `/media/${currentAsset.storageKey}`
+    : currentAsset?.id
+    ? `/media/assets/${currentAsset.id}/source.mp4`
+    : null;
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+      {/* 1. Universal Top Header */}
       <Header
         currentAsset={currentAsset}
+        currentView={currentView}
+        onViewChange={setCurrentView}
         onOpenUpload={() => setIsUploadOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
-        onOpenGuide={() => setIsGuideOpen(true)}
         onLoadDemoAsset={loadDemoAsset}
-        isReadyToExport={currentAsset?.status === 'READY' && (timeline?.clips.length || 0) > 0}
+        isReadyToExport={activeAssetStatus === 'READY' && !!timeline}
       />
 
-      <main style={{
-        flex: 1,
-        padding: '24px 28px',
-        display: 'grid',
-        gridTemplateColumns: '1.25fr 1fr',
-        gap: '24px',
-        alignItems: 'start',
-      }}>
-        {/* Left Column: Player & Timeline */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <VideoPlayer
-            ref={playerRef}
-            src={currentAsset?.id ? `/media/assets/${currentAsset.id}/proxy.mp4` : null}
-            onTimeUpdate={setCurrentTime}
-            fps={currentAsset?.fps || 30}
-          />
+      {/* 2. Main Viewport Switcher */}
+      {currentView === 'hub' ? (
+        <ProjectHub
+          assets={allAssets}
+          currentAssetId={currentAsset?.id || null}
+          onSelectAsset={(id) => loadAsset(id)}
+          onOpenUpload={() => setIsUploadOpen(true)}
+          onOpenStudio={() => setCurrentView('studio')}
+        />
+      ) : (
+        /* Studio Workspace View */
+        <main style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 420px',
+          gap: '16px',
+          padding: '16px 20px',
+          flex: 1,
+          maxWidth: '1800px',
+          margin: '0 auto',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}>
+          {/* Left Column: Broadcast Video Monitor + Multi-Track Timeline */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <VideoPlayer
+              ref={playerRef}
+              src={videoSourceUrl}
+              onTimeUpdate={(t) => setCurrentTime(t)}
+              fps={currentAsset?.fps || 30}
+            />
 
-          <TimelineTrack
-            timeline={timeline}
-            totalDuration={currentAsset?.duration || 0}
-            currentTime={currentTime}
-            onSeek={handleSeek}
-          />
-        </div>
-
-        {/* Right Column: Agent & Retakes Inspector */}
-        <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', background: 'rgba(0, 0, 0, 0.25)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
-            <button
-              onClick={() => setRightPanelTab('agent')}
-              style={{
-                flex: 1,
-                padding: '9px 12px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: rightPanelTab === 'agent' ? 'var(--accent-gradient)' : 'transparent',
-                color: rightPanelTab === 'agent' ? '#ffffff' : 'var(--text-muted)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: rightPanelTab === 'agent' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-              }}
-            >
-              <span>🤖 AI Editor Agent</span>
-            </button>
-            <button
-              onClick={() => setRightPanelTab('retakes')}
-              style={{
-                flex: 1,
-                padding: '9px 12px',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background: rightPanelTab === 'retakes' ? 'var(--accent-gradient)' : 'transparent',
-                color: rightPanelTab === 'retakes' ? '#ffffff' : 'var(--text-muted)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                boxShadow: rightPanelTab === 'retakes' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-              }}
-            >
-              <span>✂ Retake Inspector</span>
-            </button>
+            <TimelineTrack
+              timeline={timeline}
+              totalDuration={currentAsset?.duration || 20.0}
+              currentTime={currentTime}
+              onSeek={handleSeek}
+            />
           </div>
 
-          <div style={{ flex: 1, minHeight: 0 }}>
-            {rightPanelTab === 'agent' ? (
-              <AgentPanel
-                assetId={currentAsset?.id || null}
-                timeline={timeline}
-                onTimelineUpdated={() => currentAsset?.id && loadAsset(currentAsset.id)}
-                onSeek={handleSeek}
-              />
-            ) : (
-              <RetakeInspector
-                groups={groups}
-                onSelectTake={handleSelectTake}
-                onPreviewTake={handleSeek}
-                currentTime={currentTime}
-              />
-            )}
-          </div>
-        </div>
-      </main>
+          {/* Right Column: AI Video Copilot & Retake Inspector */}
+          <div style={{ height: 'calc(100vh - 90px)', display: 'flex', flexDirection: 'column' }}>
+            {/* Tab switch header */}
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              marginBottom: '10px',
+              background: 'rgba(0, 0, 0, 0.35)',
+              padding: '4px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+            }}>
+              <button
+                type="button"
+                onClick={() => setRightPanelTab('agent')}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  background: rightPanelTab === 'agent' ? 'var(--accent-gradient)' : 'transparent',
+                  color: rightPanelTab === 'agent' ? '#ffffff' : 'var(--text-muted)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  boxShadow: rightPanelTab === 'agent' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>🤖 AI Copilot</span>
+              </button>
 
-      {/* Modals */}
+              <button
+                type="button"
+                onClick={() => setRightPanelTab('retakes')}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: 'none',
+                  background: rightPanelTab === 'retakes' ? 'var(--accent-gradient)' : 'transparent',
+                  color: rightPanelTab === 'retakes' ? '#ffffff' : 'var(--text-muted)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  boxShadow: rightPanelTab === 'retakes' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>✂ Retake Inspector</span>
+              </button>
+            </div>
+
+            {/* Tab content area */}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              {rightPanelTab === 'agent' ? (
+                <AgentPanel
+                  assetId={currentAsset?.id || null}
+                  timeline={timeline}
+                  onTimelineUpdated={() => currentAsset?.id && loadAsset(currentAsset.id)}
+                  onSeek={handleSeek}
+                />
+              ) : (
+                <RetakeInspector
+                  groups={groups}
+                  onSelectTake={handleSelectTake}
+                  onPreviewTake={handleSeek}
+                  currentTime={currentTime}
+                />
+              )}
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* 3. Global Modals */}
       <UploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}

@@ -1,22 +1,37 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
-import { UploadCloud, Film, PlayCircle, Zap, Cpu, BookOpen, Sparkles, Play } from 'lucide-react';
+import {
+  Film,
+  FolderKanban,
+  SlidersHorizontal,
+  BookOpen,
+  Play,
+  UploadCloud,
+  Zap,
+  Sparkles,
+  Layers,
+  Activity
+} from 'lucide-react';
 import type { Asset } from '../../../../packages/contracts';
 
 interface HeaderProps {
   currentAsset: Asset | null;
+  currentView: 'studio' | 'hub';
+  onViewChange: (view: 'studio' | 'hub') => void;
   onOpenUpload: () => void;
   onOpenExport: () => void;
-  onOpenGuide: () => void;
   onLoadDemoAsset: () => void;
   isReadyToExport: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentAsset,
+  currentView,
+  onViewChange,
   onOpenUpload,
   onOpenExport,
-  onOpenGuide,
   onLoadDemoAsset,
   isReadyToExport,
 }) => {
@@ -25,200 +40,187 @@ export const Header: React.FC<HeaderProps> = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '16px 28px',
+      padding: '12px 24px',
       borderBottom: '1px solid var(--border-color)',
       position: 'sticky',
       top: 0,
       zIndex: 40,
+      backgroundColor: 'rgba(10, 13, 20, 0.92)',
     }}>
-      {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '10px',
-          background: 'var(--accent-gradient)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)',
-        }}>
-          <Film size={22} color="#ffffff" />
-        </div>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em' }}>TakePicker</h1>
-            <span style={{
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              padding: '2px 8px',
-              borderRadius: '20px',
-              background: 'rgba(99, 102, 241, 0.15)',
-              color: '#818cf8',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-            }}>
-              Parallel Cut Engine
-            </span>
+      {/* 1. Left: Brand & Studio Mode */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'var(--accent-gradient)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.45)',
+          }}>
+            <Film size={20} color="#ffffff" />
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            AI retake detection & fan-out FFmpeg export
-          </p>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>TakePicker</span>
+              <span className="badge badge-purple" style={{ fontSize: '0.68rem', padding: '2px 7px' }}>
+                NLE Studio v2.0
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* View Switcher: Studio vs Project Hub */}
+        <div style={{
+          display: 'flex',
+          background: 'rgba(0, 0, 0, 0.35)',
+          padding: '3px',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+        }}>
+          <button
+            type="button"
+            onClick={() => onViewChange('studio')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: currentView === 'studio' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              color: currentView === 'studio' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <SlidersHorizontal size={14} color={currentView === 'studio' ? '#818cf8' : 'currentColor'} />
+            <span>Studio Workspace</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onViewChange('hub')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: currentView === 'hub' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              color: currentView === 'hub' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <FolderKanban size={14} color={currentView === 'hub' ? '#818cf8' : 'currentColor'} />
+            <span>Projects & Hub</span>
+          </button>
         </div>
       </div>
 
-      {/* Middle: Asset info */}
+      {/* 2. Middle: Active Project Pill */}
       {currentAsset && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '16px',
+          gap: '12px',
           background: 'rgba(255, 255, 255, 0.03)',
           padding: '6px 14px',
           borderRadius: 'var(--radius-sm)',
           border: '1px solid var(--border-color)',
           fontSize: '0.82rem',
         }}>
-          <span style={{ fontWeight: 600, color: 'var(--text-main)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-main)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {currentAsset.filename}
           </span>
           {currentAsset.duration && (
-            <span style={{ color: 'var(--text-muted)' }}>
+            <span className="font-mono" style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
               {Math.floor(currentAsset.duration)}s @ {currentAsset.fps || 30}fps
             </span>
           )}
-          <span style={{
-            fontSize: '0.75rem',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            background: currentAsset.status === 'READY' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-            color: currentAsset.status === 'READY' ? 'var(--success)' : 'var(--warning)',
-            fontWeight: 600,
-          }}>
+          <span className={`badge ${currentAsset.status === 'READY' ? 'badge-green' : 'badge-amber'}`}>
             {currentAsset.status}
           </span>
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* 3. Right: Action Buttons */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <Link
           href="/guide"
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '9px 15px',
+            gap: '6px',
+            padding: '8px 14px',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(99, 102, 241, 0.15)',
-            border: '1px solid rgba(99, 102, 241, 0.4)',
+            background: 'rgba(99, 102, 241, 0.12)',
+            border: '1px solid rgba(99, 102, 241, 0.35)',
             color: '#a5b4fc',
-            fontSize: '0.88rem',
+            fontSize: '0.84rem',
             fontWeight: 600,
             textDecoration: 'none',
             transition: 'all 0.2s',
           }}
         >
-          <BookOpen size={16} color="#818cf8" />
-          <span>Guide & Architecture</span>
+          <BookOpen size={15} color="#818cf8" />
+          <span>System Guide</span>
         </Link>
 
         <button
+          type="button"
           onClick={onLoadDemoAsset}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '9px 15px',
+            gap: '6px',
+            padding: '8px 14px',
             borderRadius: 'var(--radius-md)',
             background: 'rgba(34, 197, 94, 0.12)',
             border: '1px solid rgba(34, 197, 94, 0.35)',
             color: '#86efac',
-            fontSize: '0.88rem',
+            fontSize: '0.84rem',
             fontWeight: 600,
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.22)';
-            e.currentTarget.style.borderColor = '#4ade80';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.12)';
-            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.35)';
-          }}
         >
-          <Play size={15} fill="#4ade80" color="#4ade80" />
+          <Play size={14} fill="#86efac" />
           <span>Demo Video</span>
         </button>
 
         <button
+          type="button"
           onClick={onOpenUpload}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '9px 16px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-main)',
-            fontSize: '0.88rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.borderColor = 'var(--border-hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-            e.currentTarget.style.borderColor = 'var(--border-color)';
-          }}
+          className="btn-secondary"
+          style={{ padding: '8px 14px', fontSize: '0.84rem' }}
         >
-          <UploadCloud size={17} />
-          Upload Footage
+          <UploadCloud size={16} />
+          <span>Upload Footage</span>
         </button>
 
         <button
+          type="button"
           onClick={onOpenExport}
           disabled={!isReadyToExport}
+          className="btn-primary"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '9px 20px',
-            borderRadius: 'var(--radius-md)',
-            background: isReadyToExport ? 'var(--accent-gradient)' : 'rgba(255, 255, 255, 0.05)',
-            border: 'none',
-            color: isReadyToExport ? '#ffffff' : 'var(--text-dim)',
-            fontSize: '0.88rem',
-            fontWeight: 600,
+            padding: '8px 18px',
+            fontSize: '0.84rem',
+            opacity: isReadyToExport ? 1 : 0.4,
             cursor: isReadyToExport ? 'pointer' : 'not-allowed',
-            boxShadow: isReadyToExport ? '0 4px 18px rgba(99, 102, 241, 0.35)' : 'none',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            if (isReadyToExport) {
-              e.currentTarget.style.filter = 'brightness(1.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (isReadyToExport) {
-              e.currentTarget.style.filter = 'brightness(1.0)';
-            }
           }}
         >
-          <Zap size={17} />
+          <Zap size={15} />
           <span>Export Clean Cut</span>
-          <span style={{
-            fontSize: '0.7rem',
-            background: 'rgba(0, 0, 0, 0.25)',
-            padding: '1px 6px',
-            borderRadius: '12px',
-          }}>
-            Fan-Out
-          </span>
         </button>
       </div>
     </header>

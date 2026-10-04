@@ -261,20 +261,19 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
   ];
 
   return (
-    <div style={{
+    <div className="glass glow-box" style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      backgroundColor: '#111113',
-      borderRadius: '12px',
-      border: '1px solid #27272a',
+      borderRadius: 'var(--radius-lg)',
       overflow: 'hidden',
+      border: '1px solid var(--border-color)',
     }}>
       {/* Header Tabs */}
       <div style={{
         padding: '12px 16px',
-        backgroundColor: '#18181b',
-        borderBottom: '1px solid #27272a',
+        backgroundColor: 'rgba(10, 13, 20, 0.95)',
+        borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -284,24 +283,29 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: isRunning ? '#eab308' : '#22c55e',
-            boxShadow: isRunning ? '0 0 8px #eab308' : '0 0 8px #22c55e',
+            backgroundColor: isRunning ? '#f59e0b' : '#10b981',
+            boxShadow: isRunning ? '0 0 10px #f59e0b' : '0 0 10px #10b981',
           }} />
-          <span style={{ fontWeight: 600, fontSize: '14px', color: '#f4f4f5' }}>AI Timeline Agent</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>AI Video Copilot</span>
+              <span className="badge badge-purple" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>8-Step Bound</span>
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <button
             onClick={() => setActiveTab('chat')}
             style={{
-              padding: '4px 10px',
-              fontSize: '12px',
-              fontWeight: 500,
-              borderRadius: '6px',
+              padding: '5px 12px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeTab === 'chat' ? '#3f3f46' : 'transparent',
-              color: activeTab === 'chat' ? '#ffffff' : '#a1a1aa',
+              backgroundColor: activeTab === 'chat' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              color: activeTab === 'chat' ? '#a5b4fc' : 'var(--text-muted)',
             }}
           >
             Chat
@@ -309,14 +313,14 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
           <button
             onClick={() => setActiveTab('ops')}
             style={{
-              padding: '4px 10px',
-              fontSize: '12px',
-              fontWeight: 500,
-              borderRadius: '6px',
+              padding: '5px 12px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: activeTab === 'ops' ? '#3f3f46' : 'transparent',
-              color: activeTab === 'ops' ? '#ffffff' : '#a1a1aa',
+              backgroundColor: activeTab === 'ops' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              color: activeTab === 'ops' ? '#a5b4fc' : 'var(--text-muted)',
             }}
           >
             Op Log ({opsLog.length})
@@ -325,14 +329,14 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             onClick={handleUndo}
             disabled={opsLog.length === 0 || isRunning}
             style={{
-              padding: '4px 10px',
-              fontSize: '12px',
-              fontWeight: 500,
-              borderRadius: '6px',
-              border: '1px solid #3f3f46',
+              padding: '5px 12px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-color)',
               cursor: opsLog.length === 0 ? 'not-allowed' : 'pointer',
-              backgroundColor: '#27272a',
-              color: opsLog.length === 0 ? '#71717a' : '#f4f4f5',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              color: opsLog.length === 0 ? 'var(--text-dim)' : '#f8fafc',
             }}
           >
             ↺ Undo
@@ -437,30 +441,38 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
 
           {/* Quick Presets */}
           <div style={{
-            padding: '8px 16px',
+            padding: '8px 14px',
             display: 'flex',
-            gap: '6px',
+            gap: '8px',
             overflowX: 'auto',
-            backgroundColor: '#141416',
-            borderTop: '1px solid #27272a',
+            backgroundColor: 'rgba(10, 13, 20, 0.75)',
+            borderTop: '1px solid var(--border-color)',
           }}>
-            {quickPresets.map((preset, idx) => (
+            {[
+              { label: '⭐ Pick best take for each sentence', prompt: 'Select the best take for every sentence and delete all discarded retakes' },
+              { label: '✂ Trim silences > 0.5s', prompt: 'Trim silences longer than 0.5s' },
+              { label: '🔄 Use Take 2 for intro', prompt: 'Use the second take of the intro' },
+              { label: '🛡 Scan technical defects', prompt: 'Inspect timeline cuts for clipped words or defects' },
+            ].map((preset, idx) => (
               <button
                 key={idx}
-                onClick={() => handleSubmit(undefined, preset)}
+                type="button"
+                onClick={() => handleSubmit(undefined, preset.prompt)}
                 disabled={isRunning}
                 style={{
                   whiteSpace: 'nowrap',
-                  padding: '4px 10px',
-                  fontSize: '11px',
-                  backgroundColor: '#202024',
-                  color: '#d4d4d8',
-                  borderRadius: '14px',
-                  border: '1px solid #2e2e33',
+                  padding: '5px 11px',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  color: '#cbd5e1',
+                  borderRadius: '20px',
+                  border: '1px solid var(--border-color)',
                   cursor: isRunning ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                {preset}
+                {preset.label}
               </button>
             ))}
           </div>
@@ -469,9 +481,9 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
           <form
             onSubmit={handleSubmit}
             style={{
-              padding: '12px 16px',
-              backgroundColor: '#18181b',
-              borderTop: '1px solid #27272a',
+              padding: '12px 14px',
+              backgroundColor: 'rgba(10, 13, 20, 0.95)',
+              borderTop: '1px solid var(--border-color)',
               display: 'flex',
               gap: '8px',
             }}
@@ -480,34 +492,32 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
               type="text"
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              placeholder="Tell the agent what to edit (e.g. 'Use second take of intro')..."
+              placeholder="Tell AI Copilot what to cut or refine..."
               disabled={isRunning || !assetId}
               style={{
                 flex: 1,
                 padding: '9px 12px',
-                borderRadius: '8px',
-                backgroundColor: '#09090b',
-                border: '1px solid #27272a',
-                color: '#f4f4f5',
-                fontSize: '13px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid var(--border-color)',
+                color: '#f8fafc',
+                fontSize: '0.84rem',
                 outline: 'none',
               }}
             />
             <button
               type="submit"
               disabled={isRunning || !inputPrompt.trim() || !assetId}
+              className="btn-primary"
               style={{
                 padding: '0 16px',
-                backgroundColor: isRunning ? '#4b5563' : '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: isRunning ? 'not-allowed' : 'pointer',
+                fontSize: '0.84rem',
+                borderRadius: 'var(--radius-sm)',
+                opacity: isRunning || !inputPrompt.trim() || !assetId ? 0.4 : 1,
+                cursor: isRunning || !inputPrompt.trim() || !assetId ? 'not-allowed' : 'pointer',
               }}
             >
-              {isRunning ? 'Running...' : 'Send'}
+              {isRunning ? 'Planning...' : 'Send'}
             </button>
           </form>
         </div>
