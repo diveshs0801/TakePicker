@@ -1,3 +1,4 @@
+
 """
 TakePicker Video Linter — Main CLI + orchestrator.
 Runs all FFmpeg-based checks in a single decode pass and returns structured findings.

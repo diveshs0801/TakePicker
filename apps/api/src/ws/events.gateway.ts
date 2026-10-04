@@ -92,4 +92,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       return { status: 'joined', room: `render:${data.renderId}` };
     }
   }
+
+  emitToAsset(assetId: string, event: string, payload: any) {
+    if (this.server) {
+      this.server.to(`asset:${assetId}`).emit(event, payload);
+    }
+  }
 }

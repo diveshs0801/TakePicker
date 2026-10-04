@@ -1,0 +1,91 @@
+{
+  "assetId": "asset-test-alpha",
+  "fps": 30.0,
+  "duration": 60.0,
+  "clips": [
+    {
+      "id": "clip_1",
+      "in": 0.0,
+      "out": 5.0,
+      "groupId": "g1",
+      "reason": "chosen take 1/2",
+      "text": "Welcome to this product demonstration."
+    },
+    {
+      "id": "clip_2",
+      "in": 5.0,
+      "out": 12.0,
+      "groupId": "g2",
+      "reason": "chosen take 1/2",
+      "text": "Today we are showcasing our new AI video engine."
+    },
+    {
+      "id": "clip_3",
+      "in": 12.0,
+      "out": 18.0,
+      "groupId": "g3",
+      "reason": "unique segment",
+      "text": "Notice how fast and smooth each transition renders."
+    },
+    {
+      "id": "clip_4",
+      "in": 18.0,
+      "out": 25.0,
+      "groupId": "g4",
+      "reason": "unique segment",
+      "text": "Thank you for watching and see you next time."
+    }
+  ],
+  "takeGroups": [
+    {
+      "id": "g1",
+      "idx": 0,
+      "chosenSegmentId": "seg_g1_1",
+      "takes": [
+        {
+          "id": "seg_g1_1",
+          "start": 0.0,
+          "end": 5.0,
+          "text": "Welcome to this product demonstration.",
+          "score": 0.88
+        },
+        {
+          "id": "seg_g1_2",
+          "start": 50.0,
+          "end": 55.0,
+          "text": "Hello and welcome to this video demonstration.",
+          "score": 0.94
+        }
+      ]
+    },
+    {
+      "id": "g2",
+      "idx": 1,
+      "chosenSegmentId": "seg_g2_1",
+      "takes": [
+        {
+          "id": "seg_g2_1",
+          "start": 5.0,
+          "end": 12.0,
+          "text": "Today we are showcasing our new AI video engine.",
+          "score": 0.82
+        },
+        {
+          "id": "seg_g2_2",
+          "start": 30.0,
+          "end": 37.0,
+          "text": "Today we will show you our brand new AI editor.",
+          "score": 0.96
+        }
+      ]
+    }
+  ],
+  "words": [
+    { "w": "Welcome", "start": 0.1, "end": 0.6 },
+    { "w": "to", "start": 0.62, "end": 0.8 },
+    { "w": "this", "start": 0.82, "end": 1.1 },
+    { "w": "um", "start": 1.2, "end": 1.5 },
+    { "w": "product", "start": 1.6, "end": 2.2 },
+    { "w": "demonstration", "start": 2.3, "end": 3.4 }
+  ]
+}

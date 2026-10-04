@@ -7,6 +7,7 @@ import { TimelineTrack } from '../components/TimelineTrack';
 import { RetakeInspector } from '../components/RetakeInspector';
 import { UploadModal } from '../components/UploadModal';
 import { ExportModal } from '../components/ExportModal';
+import { AgentPanel } from '../components/AgentPanel';
 import { io, Socket } from 'socket.io-client';
 import type { Asset, TakeGroup, Timeline, AssetStatus } from '../../../../packages/contracts';
 
@@ -19,6 +20,7 @@ export default function Home() {
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [activeAssetStatus, setActiveAssetStatus] = useState<AssetStatus>('READY');
+  const [rightPanelTab, setRightPanelTab] = useState<'agent' | 'retakes'>('agent');
 
   const playerRef = useRef<VideoPlayerRef | null>(null);
 
@@ -210,14 +212,62 @@ export default function Home() {
           />
         </div>
 
-        {/* Right Column: Retakes Inspector */}
-        <div style={{ height: 'calc(100vh - 120px)' }}>
-          <RetakeInspector
-            groups={groups}
-            onSelectTake={handleSelectTake}
-            onPreviewTake={handleSeek}
-            currentTime={currentTime}
-          />
+        {/* Right Column: Agent & Retakes Inspector */}
+        <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <button
+              onClick={() => setRightPanelTab('agent')}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: rightPanelTab === 'agent' ? '#2563eb' : '#27272a',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+              }}
+            >
+              🤖 AI Editor Agent
+            </button>
+            <button
+              onClick={() => setRightPanelTab('retakes')}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: rightPanelTab === 'retakes' ? '#2563eb' : '#27272a',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+              }}
+            >
+              ✂ Retake Inspector
+            </button>
+          </div>
+
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {rightPanelTab === 'agent' ? (
+              <AgentPanel
+                assetId={currentAsset?.id || null}
+                timeline={timeline}
+                onTimelineUpdated={() => currentAsset?.id && loadAsset(currentAsset.id)}
+                onSeek={handleSeek}
+              />
+            ) : (
+              <RetakeInspector
+                groups={groups}
+                onSelectTake={handleSelectTake}
+                onPreviewTake={handleSeek}
+                currentTime={currentTime}
+              />
+            )}
+          </div>
         </div>
       </main>
 

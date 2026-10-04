@@ -114,3 +114,96 @@ export interface AssetEvent {
 }
 
 export const snapToFrame = (t: number, fps: number) => Math.round(t * fps) / fps;
+
+// --- Phase 2A: Agent Layer & Timeline Operations ---
+
+export type TimelineOpType =
+  | 'INSERT'
+  | 'DELETE'
+  | 'TRIM'
+  | 'SPLIT'
+  | 'MOVE'
+  | 'SELECT_TAKE';
+
+export type TimeDomain = 'timeline' | 'source';
+
+export interface TimelineOp<T extends TimelineOpType = TimelineOpType> {
+  id: string;
+  assetId: string;
+  seq: number;
+  opType: T;
+  payload: any;
+  inverse: any;
+  actor: 'user' | 'agent';
+  agentRunId?: string;
+  createdAt: string;
+}
+
+export interface TimelineSnapshot {
+  assetId: string;
+  seq: number;
+  timeline: Timeline;
+  createdAt: string;
+}
+
+export type TimelineErrorCode =
+  | 'CLIP_NOT_FOUND'
+  | 'GROUP_NOT_FOUND'
+  | 'OUT_OF_RANGE'
+  | 'TOO_SHORT'
+  | 'STALE_BASE_SEQ'
+  | 'INVARIANT_VIOLATION'
+  | 'NOTHING_TO_UNDO'
+  | 'INVALID_ARGUMENT';
+
+export interface StructuredError {
+  ok: false;
+  code: TimelineErrorCode;
+  message: string;
+  hint?: string;
+}
+
+export interface StructuredSuccess<T = any> {
+  ok: true;
+  data: T;
+  message?: string;
+}
+
+export type ToolResult<T = any> = StructuredSuccess<T> | StructuredError;
+
+export type AgentRunStatus = 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED';
+
+export interface AgentToolCallRecord {
+  id: string;
+  name: string;
+  args: Record<string, any>;
+  result?: ToolResult;
+  error?: string;
+}
+
+export interface AgentStep {
+  step: number;
+  thought?: string;
+  toolCalls: AgentToolCallRecord[];
+  response?: string;
+}
+
+export interface AgentRun {
+  id: string;
+  assetId: string;
+  prompt: string;
+  status: AgentRunStatus;
+  steps: AgentStep[];
+  model?: string;
+  tokensIn?: number;
+  tokensOut?: number;
+  startedAt: string;
+  finishedAt?: string;
+}
+
+export interface AgentWsEvent {
+  type: 'run_started' | 'tool_call' | 'tool_result' | 'ops_applied' | 'message' | 'run_done';
+  runId: string;
+  assetId: string;
+  payload: any;
+}

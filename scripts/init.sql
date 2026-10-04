@@ -99,3 +99,44 @@ CREATE INDEX IF NOT EXISTS idx_segments_group ON segments(group_id);
 CREATE INDEX IF NOT EXISTS idx_take_groups_asset ON take_groups(asset_id);
 CREATE INDEX IF NOT EXISTS idx_renders_asset ON renders(asset_id);
 CREATE INDEX IF NOT EXISTS idx_render_segments_render ON render_segments(render_id);
+
+-- 8. Append-only Timeline Operations Log (Phase 2A)
+CREATE TABLE IF NOT EXISTS timeline_ops (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id      UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  seq           INTEGER NOT NULL,
+  op_type       TEXT NOT NULL,
+  payload       JSONB NOT NULL,
+  inverse       JSONB NOT NULL,
+  actor         TEXT NOT NULL, -- 'user' | 'agent'
+  agent_run_id  UUID,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (asset_id, seq)
+);
+
+-- 9. Timeline Snapshots (Phase 2A - for fast state reconstruction every 20 ops)
+CREATE TABLE IF NOT EXISTS timeline_snapshots (
+  asset_id      UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  seq           INTEGER NOT NULL,
+  timeline      JSONB NOT NULL,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (asset_id, seq)
+);
+
+-- 10. Agent Runs Tracker (Phase 2A)
+CREATE TABLE IF NOT EXISTS agent_runs (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id      UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  prompt        TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'RUNNING', -- 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED'
+  steps         JSONB DEFAULT '[]'::jsonb,
+  model         TEXT,
+  tokens_in     INT DEFAULT 0,
+  tokens_out    INT DEFAULT 0,
+  started_at    TIMESTAMPTZ DEFAULT NOW(),
+  finished_at   TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_timeline_ops_asset ON timeline_ops(asset_id, seq);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_asset ON agent_runs(asset_id);
+

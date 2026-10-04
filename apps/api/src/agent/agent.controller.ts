@@ -1,0 +1,72 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  Body,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
+import { AgentService } from './agent.service';
+import { TimelineService } from '../timeline/timeline.service';
+
+@Controller()
+export class AgentController {
+  constructor(
+    private readonly agentService: AgentService,
+    private readonly timelineService: TimelineService
+  ) {}
+
+  @Post('assets/:id/agent')
+  async startAgentRun(
+    @Param('id') assetId: string,
+    @Body() body: { message: string; model?: string; maxSteps?: number }
+  ) {
+    if (!body?.message) {
+      throw new BadRequestException('Field "message" is required');
+    }
+    const run = await this.agentService.runAgent(assetId, body.message, {
+      model: body.model,
+      maxSteps: body.maxSteps,
+    });
+    return {
+      runId: run.id,
+      status: run.status,
+      tokensIn: run.tokensIn,
+      tokensOut: run.tokensOut,
+      stepsCount: run.steps.length,
+      steps: run.steps,
+    };
+  }
+
+  @Get('agent-runs/:id')
+  async getAgentRun(@Param('id') runId: string) {
+    return await this.agentService.getRun(runId);
+  }
+
+  @Post('agent-runs/:id/cancel')
+  async cancelAgentRun(@Param('id') runId: string) {
+    return await this.agentService.cancelRun(runId);
+  }
+
+  @Get('assets/:id/ops')
+  async getTimelineOps(
+    @Param('id') assetId: string,
+    @Query('since') since?: string
+  ) {
+    const sinceSeq = since ? parseInt(since, 10) : 0;
+    const ops = await this.timelineService.getOpsLog(assetId, sinceSeq);
+    return { assetId, sinceSeq, ops };
+  }
+
+  @Post('assets/:id/undo')
+  async undoLastOp(@Param('id') assetId: string) {
+    const res = await this.timelineService.undo(assetId, 'user');
+    return {
+      assetId,
+      seq: res.seq,
+      undoneOp: res.op,
+      timeline: res.timeline,
+    };
+  }
+}

@@ -20,5 +20,6 @@
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true
   },
-  "include": ["src/**/*", "../../packages/contracts/**/*"]
+  "include": ["src/**/*", "../../packages/contracts/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }
