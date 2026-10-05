@@ -39,5 +39,6 @@ export interface LLMClient {
     tools?: ToolDef[];
     temperature?: number;
     max_tokens?: number;
+    model?: string;
   }): Promise<LLMResponse>;
 }

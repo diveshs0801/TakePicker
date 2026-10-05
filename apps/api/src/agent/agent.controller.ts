@@ -17,10 +17,18 @@ export class AgentController {
     private readonly timelineService: TimelineService
   ) {}
 
+  @Get('agent/providers')
+  getProviders() {
+    return {
+      active: this.agentService.getActiveProvider(),
+      providers: this.agentService.getAvailableProviders(),
+    };
+  }
+
   @Post('assets/:id/agent')
   async startAgentRun(
     @Param('id') assetId: string,
-    @Body() body: { message: string; model?: string; maxSteps?: number }
+    @Body() body: { message: string; model?: string; maxSteps?: number; provider?: string }
   ) {
     if (!body?.message) {
       throw new BadRequestException('Field "message" is required');
@@ -28,10 +36,13 @@ export class AgentController {
     const run = await this.agentService.runAgent(assetId, body.message, {
       model: body.model,
       maxSteps: body.maxSteps,
+      provider: body.provider,
     });
     return {
       runId: run.id,
       status: run.status,
+      model: run.model,
+      provider: run.provider,
       tokensIn: run.tokensIn,
       tokensOut: run.tokensOut,
       stepsCount: run.steps.length,

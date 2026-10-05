@@ -5,6 +5,11 @@ import { TimelineService } from '../timeline/timeline.service';
 import { ToolsRegistry } from '../tools/tools.registry';
 import { LLMClient, LLMMessage } from './llm-client.interface';
 import { DeterministicMockLLMClient } from './llm-client.mock';
+import {
+  createLLMClientFromEnv,
+  ResolvedClientInfo,
+  listAvailableProviders,
+} from './llm-providers';
 import { AGENT_SYSTEM_PROMPT, buildTimelineContextSummary } from './agent.prompts';
 import {
   AgentRun,
@@ -18,6 +23,7 @@ import { randomUUID } from 'node:crypto';
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
   private llmClient: LLMClient;
+  private activeProviderInfo: ResolvedClientInfo;
 
   constructor(
     private readonly db: DatabaseService,
@@ -25,8 +31,26 @@ export class AgentService {
     private readonly timelineService: TimelineService,
     private readonly toolsRegistry: ToolsRegistry
   ) {
-    // Default to deterministic client; can be swapped for OpenAI/Anthropic when keys are provided
-    this.llmClient = new DeterministicMockLLMClient();
+    this.activeProviderInfo = createLLMClientFromEnv();
+    this.llmClient = this.activeProviderInfo.client;
+
+    if (this.activeProviderInfo.isReal) {
+      this.logger.log(
+        `[AgentService] 🚀 Live LLM initialized with provider "${this.activeProviderInfo.provider}" (model: ${this.activeProviderInfo.model})`
+      );
+    } else {
+      this.logger.log(
+        `[AgentService] ℹ️ Running with DeterministicMockLLMClient. Set DEEPSEEK_API_KEY, GROQ_API_KEY, or LLM_API_KEY to activate live AI inference.`
+      );
+    }
+  }
+
+  getActiveProvider(): ResolvedClientInfo {
+    return this.activeProviderInfo;
+  }
+
+  getAvailableProviders() {
+    return listAvailableProviders();
   }
 
   setLLMClient(client: LLMClient) {
@@ -36,11 +60,21 @@ export class AgentService {
   async runAgent(
     assetId: string,
     prompt: string,
-    options?: { maxSteps?: number; model?: string }
-  ): Promise<AgentRun> {
+    options?: { maxSteps?: number; model?: string; provider?: string }
+  ): Promise<AgentRun & { provider?: string }> {
     const runId = randomUUID();
-    const model = options?.model || 'takepicker-agent-v1';
+    const model = options?.model || this.activeProviderInfo.model || 'takepicker-agent-v1';
     const maxSteps = options?.maxSteps || 8;
+
+    // Use custom client if caller specifies an alternate provider
+    let runnerClient = this.llmClient;
+    if (options?.provider) {
+      const custom = createLLMClientFromEnv({
+        provider: options.provider,
+        model: options.model,
+      });
+      runnerClient = custom.client;
+    }
 
     // 1. Create run record in database
     await this.db.query(
@@ -54,6 +88,7 @@ export class AgentService {
       assetId,
       prompt,
       model,
+      provider: this.activeProviderInfo.provider,
     });
 
     // 2. Build compact context
@@ -76,10 +111,11 @@ export class AgentService {
       while (stepCount < maxSteps) {
         stepCount++;
 
-        const response = await this.llmClient.chat({
+        const response = await runnerClient.chat({
           messages,
           tools: this.toolsRegistry.getToolSchemasForLLM(),
           temperature: 0,
+          model,
         });
 
         if (response.usage) {
@@ -213,6 +249,7 @@ export class AgentService {
       status: runStatus,
       steps: recordedSteps,
       model,
+      provider: this.activeProviderInfo.provider,
       tokensIn: totalTokensIn,
       tokensOut: totalTokensOut,
       startedAt: new Date().toISOString(),

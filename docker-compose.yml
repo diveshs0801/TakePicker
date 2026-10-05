@@ -45,6 +45,20 @@ services:
       DATABASE_URL: postgres://tp:tp@postgres:5432/takepicker
       MEDIA_DIR: /media
       NODE_OPTIONS: "--max-old-space-size=256"
+      # Live LLM Integration (DeepSeek, Groq, Gemini, Ollama, OpenRouter, etc.)
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports: ["3000:3000"]
     depends_on: [redis, postgres]
     volumes: [media:/media]

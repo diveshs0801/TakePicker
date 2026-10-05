@@ -13,6 +13,8 @@ interface AgentMessage {
   tokensIn?: number;
   tokensOut?: number;
   timestamp: string;
+  provider?: string;
+  model?: string;
 }
 
 interface AgentPanelProps {
@@ -40,6 +42,15 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [opsLog, setOpsLog] = useState<TimelineOp[]>([]);
   const [activeTab, setActiveTab] = useState<'chat' | 'ops'>('chat');
+  const [providerInfo, setProviderInfo] = useState<{
+    provider: string;
+    model: string;
+    isReal: boolean;
+    baseUrl?: string;
+  } | null>(null);
+  const [providersList, setProvidersList] = useState<any[]>([]);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<string>('');
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll chat to bottom
@@ -65,6 +76,21 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
     loadOpsLog();
   }, [assetId]);
 
+  // Load LLM provider configuration
+  useEffect(() => {
+    fetch('/api/agent/providers')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.active) {
+          setProviderInfo(data.active);
+        }
+        if (data?.providers) {
+          setProvidersList(data.providers);
+        }
+      })
+      .catch((err) => console.warn('Could not load LLM providers:', err));
+  }, []);
+
   // Listen to WebSocket events for real-time streaming
   useEffect(() => {
     if (!assetId) return;
@@ -77,6 +103,23 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
 
     socket.on('connect', () => {
       socket.emit('join:asset', { assetId });
+    });
+
+    socket.on('agent:run_started', (data: any) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last && last.sender === 'agent' && last.status === 'RUNNING') {
+          return [
+            ...prev.slice(0, -1),
+            {
+              ...last,
+              model: data.model,
+              provider: data.provider,
+            },
+          ];
+        }
+        return prev;
+      });
     });
 
     socket.on('agent:tool_call', (data: any) => {
@@ -170,6 +213,8 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
       text: 'Analyzing timeline and formulating operations...',
       status: 'RUNNING',
       steps: [],
+      provider: selectedProvider || providerInfo?.provider,
+      model: providerInfo?.model,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
@@ -180,7 +225,10 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
       const res = await fetch(`/api/assets/${assetId}/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: promptToSend }),
+        body: JSON.stringify({
+          message: promptToSend,
+          provider: selectedProvider || undefined,
+        }),
       });
 
       if (res.ok) {
@@ -197,6 +245,8 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
                 steps: data.steps,
                 tokensIn: data.tokensIn,
                 tokensOut: data.tokensOut,
+                provider: data.provider || last.provider,
+                model: data.model || last.model,
               },
             ];
           }
@@ -287,9 +337,107 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             boxShadow: isRunning ? '0 0 10px #f59e0b' : '0 0 10px #10b981',
           }} />
           <div>
-            <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <span>AI Video Copilot</span>
               <span className="badge badge-purple" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>8-Step Bound</span>
+              {providerInfo && (
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowModelPicker(!showModelPicker)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: providerInfo.isReal ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                      border: `1px solid ${providerInfo.isReal ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+                      color: providerInfo.isReal ? '#34d399' : '#fbbf24',
+                      borderRadius: '4px',
+                      padding: '2px 7px',
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                    title="Click to view or switch LLM Provider"
+                  >
+                    <span>{providerInfo.isReal ? '⚡' : '🛡️'}</span>
+                    <span>{selectedProvider ? selectedProvider.toUpperCase() : providerInfo.provider}</span>
+                    <span style={{ opacity: 0.6, fontSize: '0.55rem' }}>▼</span>
+                  </button>
+
+                  {showModelPicker && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: '6px',
+                        zIndex: 100,
+                        width: '270px',
+                        background: '#0f172a',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.6)',
+                        padding: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: '#94a3b8',
+                          padding: '4px 6px',
+                          borderBottom: '1px solid rgba(255,255,255,0.08)',
+                          marginBottom: '6px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <span>AVAILABLE LLM PROVIDERS</span>
+                        <span style={{ cursor: 'pointer' }} onClick={() => setShowModelPicker(false)}>✕</span>
+                      </div>
+                      {providersList.map((p) => {
+                        const isCurrent =
+                          (selectedProvider && p.id === selectedProvider) ||
+                          (!selectedProvider && p.name === providerInfo.provider);
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setSelectedProvider(p.id);
+                              setShowModelPicker(false);
+                            }}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              background: isCurrent ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                              marginBottom: '2px',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 600, color: isCurrent ? '#a5b4fc' : '#e2e8f0' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{p.activeModel || p.defaultModel}</div>
+                            </div>
+                            <div>
+                              {p.isConfigured ? (
+                                <span style={{ fontSize: '0.6rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 5px', borderRadius: '3px' }}>Active</span>
+                              ) : p.freeTier ? (
+                                <span style={{ fontSize: '0.6rem', color: '#38bdf8', background: 'rgba(56,189,248,0.15)', padding: '2px 5px', borderRadius: '3px' }}>Free Tier</span>
+                              ) : (
+                                <span style={{ fontSize: '0.6rem', color: '#64748b', background: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: '3px' }}>Need Key</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -398,7 +546,7 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
                               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#93c5fd' }}>
                                 <span>⚙ {tc.name}()</span>
                                 <span style={{ color: tc.result?.ok ? '#4ade80' : '#f87171' }}>
-                                  {tc.result?.ok ? '✓ ok' : tc.result?.code || 'pending'}
+                                  {tc.result?.ok ? '✓ ok' : (tc.result as any)?.code || 'pending'}
                                 </span>
                               </div>
                               <div style={{ color: '#a1a1aa', marginTop: '2px', wordBreak: 'break-all' }}>
@@ -412,16 +560,25 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
                   )}
 
                   {/* Telemetry info */}
-                  {msg.tokensIn !== undefined && (
+                  {(msg.tokensIn !== undefined || msg.provider) && (
                     <div style={{
                       marginTop: '8px',
                       fontSize: '10px',
                       color: '#71717a',
                       display: 'flex',
+                      flexWrap: 'wrap',
                       gap: '8px',
+                      alignItems: 'center',
                     }}>
-                      <span>Tokens: {msg.tokensIn + (msg.tokensOut || 0)}</span>
-                      <span>Status: {msg.status}</span>
+                      {msg.provider && (
+                        <span style={{ color: '#93c5fd', fontWeight: 600 }}>
+                          ⚡ {msg.provider} {msg.model ? `(${msg.model})` : ''}
+                        </span>
+                      )}
+                      {msg.tokensIn !== undefined && (
+                        <span>Tokens: {msg.tokensIn + (msg.tokensOut || 0)}</span>
+                      )}
+                      {msg.status && <span>Status: {msg.status}</span>}
                     </div>
                   )}
                 </div>

@@ -120,14 +120,35 @@ Evaluated on my own test clips (small sample, indicative rather than conclusive)
 git clone https://github.com/diveshs0801/TakePicker.git
 cd TakePicker
 
-# 2. Start the full application stack
+# 2. Configure LLM (Optional - defaults to offline deterministic mock)
+# Copy example configuration and add your key (e.g. DeepSeek, Groq, Gemini)
+cp .env.example .env
+
+# 3. Start the full application stack
 docker compose up
 
-# 3. (Optional) Scale parallel render workers
+# 4. (Optional) Scale parallel render workers
 docker compose up -d --scale render-worker=4
 ```
 
 Open **[http://localhost:3001](http://localhost:3001)** in your browser.
+
+---
+
+### 🧠 AI Video Copilot & Live LLM Integration
+
+TakePicker features an autonomous AI video editing agent bounded by optimistic concurrency control and structured tools. It supports any OpenAI-compatible provider:
+
+| Provider | Model | Free Tier? | Best For |
+|:---|:---|:---:|:---|
+| **DeepSeek** ⭐ | `deepseek-chat` | $5 signup credits | Ultra-low cost ($0.27/1M), strong function calling |
+| **Groq** ⭐ | `llama-3.3-70b-versatile` | ✅ Yes | Blazing fast inference (~500 tok/s), completely free |
+| **Google Gemini** | `gemini-2.0-flash` | ✅ Yes (15 RPM) | High rate limits, strong multimodal capabilities |
+| **OpenRouter** | 100+ models | ✅ Free models | Unified routing gateway |
+| **Ollama** | Local GGUF models | ✅ 100% Free | Fully private, offline execution on `localhost:11434` |
+| **Deterministic Mock** | Offline rule engine | ✅ | Automated evals and zero-dependency local testing |
+
+To switch models dynamically, you can use the interactive provider pill in the UI Copilot header or set `LLM_PROVIDER` in your `.env` file.
 
 ---
 
