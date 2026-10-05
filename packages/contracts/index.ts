@@ -207,3 +207,59 @@ export interface AgentWsEvent {
   assetId: string;
   payload: any;
 }
+
+// --- Phase 2B: Video Linter & Verification Contracts ---
+
+export type DefectCheckType =
+  | 'D1_black_frames'
+  | 'D2_frozen_video'
+  | 'D3_audio_dropout'
+  | 'D4_loudness_jump'
+  | 'D5_av_desync';
+
+export interface LintFinding {
+  check: DefectCheckType | string;
+  severity: 'error' | 'warn';
+  start: number;
+  end: number;
+  message: string;
+  suggestedFix?: {
+    action: string;
+    targetClipId?: string;
+    suggestedBoundary?: number;
+  };
+}
+
+export interface LintReport {
+  id: string;
+  renderId: string;
+  assetId: string;
+  defectCount: number;
+  findings: LintFinding[];
+  duration?: number;
+  lintTimeSec?: number;
+  passed: boolean;
+  createdAt: string;
+}
+
+// --- Plan 4: Pro NLE Export Interchange Contracts ---
+
+export type ExportFormat = 'fcpxml' | 'premiere' | 'edl' | 'otio';
+
+export interface ExportOptions {
+  format: ExportFormat;
+  sequenceName?: string;
+  timecodeStart?: string;
+  includeAudio?: boolean;
+}
+
+export interface ExportResult {
+  format: ExportFormat;
+  filename: string;
+  mimeType: string;
+  content: string;
+  clipCount: number;
+  totalDurationSec: number;
+}
+
+

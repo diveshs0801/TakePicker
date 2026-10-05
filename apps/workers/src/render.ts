@@ -2,8 +2,11 @@ import { Worker, FlowProducer, Job } from "bullmq";
 import IORedis from "ioredis";
 import { Pool } from "pg";
 import path from "node:path";
-import { renderSegment, concat } from "./ffmpeg";
-import type { Timeline, RenderSegmentJob, MergeJob, ProgressEvent } from "../../../packages/contracts";
+import crypto from "node:crypto";
+import { promises as fs } from "node:fs";
+import { renderSegment, concat, isValidMedia } from "./ffmpeg";
+import { runVideoLinter } from "./linter";
+import type { Timeline, RenderSegmentJob, MergeJob, ProgressEvent, Word } from "../../../packages/contracts";
 
 const connection = new IORedis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
 const pub = new IORedis(process.env.REDIS_URL!);
@@ -51,26 +54,57 @@ new Worker<RenderSegmentJob>(
   async (job: Job<RenderSegmentJob>) => {
     const d = job.data;
     let last = 0;
-    await renderSegment(
-      d.srcPath,
-      d.in,
-      d.out,
-      d.outPath,
-      (pct) => {
-        if (pct - last < 5) return; // throttle events
-        last = pct;
-        const evt: ProgressEvent = { renderId: d.renderId, segmentIdx: d.idx, pct: Math.round(pct) };
-        pub.publish("render-progress", JSON.stringify(evt));
-        pub.publish(`render:${d.renderId}`, JSON.stringify(evt));
-      },
-      THREADS
-    );
+
+    // Segment Caching (Phase 2B):
+    // Compute content hash from source path and precise in/out timestamps.
+    const cacheKey = crypto
+      .createHash("sha256")
+      .update(`${d.srcPath}:${d.in.toFixed(3)}:${d.out.toFixed(3)}:v1`)
+      .digest("hex");
+    const cacheDir = path.join(MEDIA, "cache", "segments");
+    const cachedPath = path.join(cacheDir, `${cacheKey}.mp4`);
+
+    let restoredFromCache = false;
+    try {
+      if (await isValidMedia(cachedPath)) {
+        await fs.mkdir(path.dirname(d.outPath), { recursive: true });
+        await fs.copyFile(cachedPath, d.outPath);
+        restoredFromCache = true;
+      }
+    } catch {
+      restoredFromCache = false;
+    }
+
+    if (!restoredFromCache) {
+      await renderSegment(
+        d.srcPath,
+        d.in,
+        d.out,
+        d.outPath,
+        (pct) => {
+          if (pct - last < 5) return; // throttle events
+          last = pct;
+          const evt: ProgressEvent = { renderId: d.renderId, segmentIdx: d.idx, pct: Math.round(pct) };
+          pub.publish("render-progress", JSON.stringify(evt));
+          pub.publish(`render:${d.renderId}`, JSON.stringify(evt));
+        },
+        THREADS
+      );
+
+      // Save valid output to segment cache for future runs
+      try {
+        await fs.mkdir(cacheDir, { recursive: true });
+        await fs.copyFile(d.outPath, cachedPath);
+      } catch (cacheErr) {
+        console.warn(`[Segment Cache] Warning: failed to save ${cacheKey} to cache:`, cacheErr);
+      }
+    }
 
     const doneEvt: ProgressEvent = { renderId: d.renderId, segmentIdx: d.idx, pct: 100 };
     pub.publish("render-progress", JSON.stringify(doneEvt));
     pub.publish(`render:${d.renderId}`, JSON.stringify(doneEvt));
 
-    return { idx: d.idx, path: d.outPath };
+    return { idx: d.idx, path: d.outPath, fromCache: restoredFromCache };
   },
   { connection, concurrency: 1 }
 );
@@ -78,7 +112,7 @@ new Worker<RenderSegmentJob>(
 new Worker<MergeJob>(
   "merge",
   async (job: Job<MergeJob>) => {
-    const { renderId, outPath } = job.data;
+    const { renderId, assetId, outPath } = job.data;
     try {
       await pool.query("UPDATE renders SET status = 'MERGING', updated_at = NOW() WHERE id = $1", [renderId]);
       await pub.publish(`render:${renderId}`, JSON.stringify({ renderId, status: "MERGING", progress: 95 }));
@@ -97,7 +131,62 @@ new Worker<MergeJob>(
         [relativeOutputKey, renderId]
       );
 
-      const finishEvt = { renderId, status: "DONE", path: outPath, outputKey: relativeOutputKey, progress: 100 };
+      // --- Automated Video Linter & Verification (Phase 2B) ---
+      let lintReportId: string | null = null;
+      let lintPassed = true;
+      let defectCount = 0;
+      try {
+        const wordsRes = await pool.query(
+          "SELECT words FROM transcripts WHERE asset_id = $1",
+          [assetId]
+        );
+        const words: Word[] = wordsRes.rows[0]?.words || [];
+
+        const lintResult = await runVideoLinter(outPath, words);
+        lintPassed = lintResult.passed;
+        defectCount = lintResult.defectCount;
+        lintReportId = crypto.randomUUID();
+
+        await pool.query(
+          `INSERT INTO lint_reports (id, render_id, asset_id, defect_count, findings, duration, lint_time_sec, passed, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+          [
+            lintReportId,
+            renderId,
+            assetId,
+            lintResult.defectCount,
+            JSON.stringify(lintResult.findings),
+            lintResult.duration,
+            lintResult.lintTimeSec,
+            lintResult.passed,
+          ]
+        );
+
+        const lintEvt = {
+          renderId,
+          assetId,
+          lintReportId,
+          defectCount: lintResult.defectCount,
+          findings: lintResult.findings,
+          passed: lintResult.passed,
+          lintTimeSec: lintResult.lintTimeSec,
+        };
+        await pub.publish("render-lint", JSON.stringify(lintEvt));
+        await pub.publish(`render:${renderId}`, JSON.stringify({ ...lintEvt, type: "lint_report" }));
+      } catch (lintErr) {
+        console.warn(`[Merge Worker] Linter execution error on render ${renderId}:`, lintErr);
+      }
+
+      const finishEvt = {
+        renderId,
+        status: "DONE",
+        path: outPath,
+        outputKey: relativeOutputKey,
+        progress: 100,
+        lintReportId,
+        defectCount,
+        lintPassed,
+      };
       pub.publish("render-done", JSON.stringify(finishEvt));
       pub.publish(`render:${renderId}`, JSON.stringify(finishEvt));
 

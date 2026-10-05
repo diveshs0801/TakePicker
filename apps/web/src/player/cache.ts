@@ -73,12 +73,12 @@ export class FrameCache {
     let oldestKey: number | null = null;
     let oldestTime = Infinity;
 
-    for (const [key, item] of this.cache.entries()) {
+    this.cache.forEach((item, key) => {
       if (item.lastAccessed < oldestTime) {
         oldestTime = item.lastAccessed;
         oldestKey = key;
       }
-    }
+    });
 
     if (oldestKey !== null) {
       const item = this.cache.get(oldestKey)!;
@@ -94,13 +94,13 @@ export class FrameCache {
   }
 
   clear(): void {
-    for (const item of this.cache.values()) {
+    this.cache.forEach((item) => {
       try {
         item.frame.close();
       } catch (e) {
         // Already closed
       }
-    }
+    });
     this.cache.clear();
     this.currentBytes = 0;
     this.openFrameCount = 0;

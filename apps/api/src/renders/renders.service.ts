@@ -94,4 +94,60 @@ export class RendersService {
       outputUrl: row.output_key ? `/media/${row.output_key}` : null,
     };
   }
+
+  async getLintReport(renderId: string) {
+    const res = await this.db.query(
+      `SELECT * FROM lint_reports WHERE render_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [renderId]
+    );
+    if (res.rows.length === 0) {
+      return {
+        renderId,
+        defectCount: 0,
+        findings: [],
+        passed: true,
+        message: 'No lint report found for this render',
+      };
+    }
+    const row = res.rows[0];
+    return {
+      id: row.id,
+      renderId: row.render_id,
+      assetId: row.asset_id,
+      defectCount: row.defect_count,
+      findings: row.findings,
+      duration: row.duration,
+      lintTimeSec: row.lint_time_sec,
+      passed: row.passed,
+      createdAt: row.created_at,
+    };
+  }
+
+  async getLatestLintReportForAsset(assetId: string) {
+    const res = await this.db.query(
+      `SELECT * FROM lint_reports WHERE asset_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [assetId]
+    );
+    if (res.rows.length === 0) {
+      return {
+        assetId,
+        defectCount: 0,
+        findings: [],
+        passed: true,
+        message: 'No lint reports generated yet for this asset',
+      };
+    }
+    const row = res.rows[0];
+    return {
+      id: row.id,
+      renderId: row.render_id,
+      assetId: row.asset_id,
+      defectCount: row.defect_count,
+      findings: row.findings,
+      duration: row.duration,
+      lintTimeSec: row.lint_time_sec,
+      passed: row.passed,
+      createdAt: row.created_at,
+    };
+  }
 }

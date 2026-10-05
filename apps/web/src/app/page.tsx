@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
-import { VideoPlayer, VideoPlayerRef } from '../components/VideoPlayer';
+import { WebCodecsPlayer, WebCodecsPlayerRef } from '../player/WebCodecsPlayer';
 import { TimelineTrack } from '../components/TimelineTrack';
 import { RetakeInspector } from '../components/RetakeInspector';
 import { UploadModal } from '../components/UploadModal';
@@ -27,7 +27,7 @@ export default function Home() {
   const [activeAssetStatus, setActiveAssetStatus] = useState<AssetStatus>('READY');
   const [rightPanelTab, setRightPanelTab] = useState<'agent' | 'retakes'>('agent');
 
-  const playerRef = useRef<VideoPlayerRef | null>(null);
+  const playerRef = useRef<WebCodecsPlayerRef | null>(null);
 
   const DEMO_ASSET_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
@@ -235,7 +235,7 @@ export default function Home() {
         }}>
           {/* Left Column: Broadcast Video Monitor + Multi-Track Timeline */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <VideoPlayer
+            <WebCodecsPlayer
               ref={playerRef}
               src={videoSourceUrl}
               onTimeUpdate={(t) => setCurrentTime(t)}

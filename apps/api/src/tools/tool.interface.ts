@@ -5,11 +5,14 @@ import { RendersService } from '../renders/renders.service';
 import { DatabaseService } from '../database/database.service';
 import { ToolResult } from '../../../../packages/contracts';
 
+import { ExportService } from '../export/export.service';
+
 export interface ToolContext {
   assetId: string;
   timelineService: TimelineService;
   assetsService: AssetsService;
   rendersService?: RendersService;
+  exportService?: ExportService;
   db: DatabaseService;
   actor: 'user' | 'agent';
   agentRunId?: string;

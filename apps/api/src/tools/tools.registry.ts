@@ -4,6 +4,7 @@ import { TimelineService, StructuredOpException } from '../timeline/timeline.ser
 import { AssetsService } from '../assets/assets.service';
 import { RendersService } from '../renders/renders.service';
 import { DatabaseService } from '../database/database.service';
+import { ExportService } from '../export/export.service';
 import {
   ToolDefinition,
   ToolContext,
@@ -23,7 +24,8 @@ export class ToolsRegistry {
     private readonly timelineService: TimelineService,
     private readonly assetsService: AssetsService,
     private readonly db: DatabaseService,
-    private readonly rendersService: RendersService
+    private readonly rendersService: RendersService,
+    private readonly exportService: ExportService
   ) {
     this.registerAllTools();
   }
@@ -68,6 +70,7 @@ export class ToolsRegistry {
       timelineService: this.timelineService,
       assetsService: this.assetsService,
       rendersService: this.rendersService,
+      exportService: this.exportService,
       db: this.db,
     };
 
@@ -285,14 +288,44 @@ export class ToolsRegistry {
           };
         }
 
-        // Return mock or recorded findings for closed loop repair
+        const lintRes = await ctx.db.query(
+          `SELECT id, defect_count, findings, duration, lint_time_sec, passed, created_at
+           FROM lint_reports
+           WHERE render_id = $1
+           ORDER BY created_at DESC LIMIT 1`,
+          [renderId]
+        );
+
+        if (lintRes.rows.length === 0) {
+          return {
+            ok: true,
+            data: {
+              renderId,
+              defectCount: 0,
+              findings: [],
+              passed: true,
+              message: 'No lint report has been generated yet for this render.',
+            },
+          };
+        }
+
+        const report = lintRes.rows[0];
         return {
           ok: true,
           data: {
             renderId,
-            defectCount: 0,
-            findings: [],
+            lintReportId: report.id,
+            defectCount: report.defect_count,
+            findings: report.findings,
+            passed: report.passed,
+            duration: report.duration,
+            lintTimeSec: report.lint_time_sec,
+            createdAt: report.created_at,
           },
+          message:
+            report.defect_count === 0
+              ? 'Video audit passed cleanly with 0 technical defects detected.'
+              : `Detected ${report.defect_count} defect(s) in render: ${report.findings.map((f: any) => `[${f.check}] ${f.start.toFixed(2)}s-${f.end.toFixed(2)}s: ${f.message}`).join('; ')}`,
         };
       },
     });
@@ -585,5 +618,44 @@ export class ToolsRegistry {
         };
       },
     });
+
+    // 15. export_timeline
+    this.register({
+      name: 'export_timeline',
+      description: 'Exports the active timeline to professional NLE interchange formats: fcpxml (Final Cut Pro / DaVinci Resolve), premiere (Adobe Premiere Pro XML), edl (CMX 3600 EDL), or otio (OpenTimelineIO).',
+      schema: z.object({
+        format: z.enum(['fcpxml', 'premiere', 'edl', 'otio']).describe('Target NLE interchange format'),
+        sequenceName: z.string().optional().describe('Optional custom sequence name'),
+      }),
+      isWrite: false,
+      execute: async (ctx, args) => {
+        if (!ctx.exportService) {
+          return {
+            ok: false,
+            code: 'INVALID_ARGUMENT',
+            message: 'Export service is not available',
+          };
+        }
+        const exportRes = await ctx.exportService.exportTimeline(
+          ctx.assetId,
+          args.format,
+          undefined,
+          { format: args.format, sequenceName: args.sequenceName }
+        );
+        return {
+          ok: true,
+          data: {
+            format: exportRes.format,
+            filename: exportRes.filename,
+            clipCount: exportRes.clipCount,
+            totalDurationSec: exportRes.totalDurationSec,
+            downloadUrl: `/api/assets/${ctx.assetId}/export/${exportRes.format}`,
+            snippet: exportRes.content.slice(0, 300) + '...',
+          },
+          message: `Successfully generated ${exportRes.format.toUpperCase()} export (${exportRes.clipCount} clips, ${exportRes.totalDurationSec.toFixed(1)}s)`,
+        };
+      },
+    });
   }
 }
+

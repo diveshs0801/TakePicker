@@ -158,3 +158,20 @@ CREATE TABLE IF NOT EXISTS uploads (
 CREATE INDEX IF NOT EXISTS idx_uploads_expires ON uploads(expires_at) WHERE status != 'COMPLETE';
 CREATE INDEX IF NOT EXISTS idx_uploads_asset ON uploads(asset_id);
 
+-- 12. Video Linter Reports (Phase 2B)
+CREATE TABLE IF NOT EXISTS lint_reports (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  render_id     UUID NOT NULL REFERENCES renders(id) ON DELETE CASCADE,
+  asset_id      UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  defect_count  INT NOT NULL DEFAULT 0,
+  findings      JSONB NOT NULL DEFAULT '[]'::jsonb,
+  duration      FLOAT,
+  lint_time_sec FLOAT,
+  passed        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_lint_reports_render ON lint_reports(render_id);
+CREATE INDEX IF NOT EXISTS idx_lint_reports_asset ON lint_reports(asset_id);
+
+

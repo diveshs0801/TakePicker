@@ -18,4 +18,14 @@ export class RendersController {
   async getRender(@Param('id') id: string) {
     return this.rendersService.getRender(id);
   }
+
+  @Get('renders/:id/lint')
+  async getRenderLintReport(@Param('id') id: string) {
+    return this.rendersService.getLintReport(id);
+  }
+
+  @Get('assets/:assetId/lint/latest')
+  async getLatestLintReport(@Param('assetId') assetId: string) {
+    return this.rendersService.getLatestLintReportForAsset(assetId);
+  }
 }

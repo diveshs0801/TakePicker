@@ -9,6 +9,8 @@ import { ToolsModule } from './tools/tools.module';
 import { AgentModule } from './agent/agent.module';
 import { UploadsModule } from './uploads/uploads.module';
 
+import { ExportModule } from './export/export.module';
+
 @Module({
   imports: [
     DatabaseModule,
@@ -20,6 +22,7 @@ import { UploadsModule } from './uploads/uploads.module';
     ToolsModule,
     AgentModule,
     UploadsModule,
+    ExportModule,
   ],
 })
 export class AppModule {}
