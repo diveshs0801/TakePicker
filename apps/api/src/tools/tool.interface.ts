@@ -6,6 +6,7 @@ import { DatabaseService } from '../database/database.service';
 import { ToolResult } from '../../../../packages/contracts';
 
 import { ExportService } from '../export/export.service';
+import { CaptionsService } from '../captions/captions.service';
 
 export interface ToolContext {
   assetId: string;
@@ -13,6 +14,7 @@ export interface ToolContext {
   assetsService: AssetsService;
   rendersService?: RendersService;
   exportService?: ExportService;
+  captionsService?: CaptionsService;
   db: DatabaseService;
   actor: 'user' | 'agent';
   agentRunId?: string;

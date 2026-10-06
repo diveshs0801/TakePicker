@@ -262,4 +262,42 @@ export interface ExportResult {
   totalDurationSec: number;
 }
 
+// --- Plan 5: AI Dynamic Captions & Subtitles Engine Contracts ---
+
+export type SubtitleFormat = 'srt' | 'vtt' | 'ass' | 'json';
+export type SubtitleStylePreset = 'kinetic' | 'neon' | 'modern' | 'minimal';
+
+export interface TimelineWord extends Word {
+  timelineStart: number;
+  timelineEnd: number;
+  clipId: string;
+}
+
+export interface SubtitleCue {
+  index: number;
+  start: number;
+  end: number;
+  text: string;
+  words: TimelineWord[];
+}
+
+export interface SubtitleExportOptions {
+  format?: SubtitleFormat;
+  stylePreset?: SubtitleStylePreset;
+  maxWordsPerCue?: number;
+  maxCharsPerCue?: number;
+}
+
+export interface SubtitleExportResult {
+  format: SubtitleFormat;
+  filename: string;
+  mimeType: string;
+  content: string;
+  cueCount: number;
+  wordCount: number;
+  totalDurationSec: number;
+  cues: SubtitleCue[];
+}
+
+
 

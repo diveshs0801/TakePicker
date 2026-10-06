@@ -5,6 +5,7 @@ import { AssetsService } from '../assets/assets.service';
 import { RendersService } from '../renders/renders.service';
 import { DatabaseService } from '../database/database.service';
 import { ExportService } from '../export/export.service';
+import { CaptionsService } from '../captions/captions.service';
 import {
   ToolDefinition,
   ToolContext,
@@ -25,7 +26,8 @@ export class ToolsRegistry {
     private readonly assetsService: AssetsService,
     private readonly db: DatabaseService,
     private readonly rendersService: RendersService,
-    private readonly exportService: ExportService
+    private readonly exportService: ExportService,
+    private readonly captionsService: CaptionsService
   ) {
     this.registerAllTools();
   }
@@ -71,6 +73,7 @@ export class ToolsRegistry {
       assetsService: this.assetsService,
       rendersService: this.rendersService,
       exportService: this.exportService,
+      captionsService: this.captionsService,
       db: this.db,
     };
 
@@ -653,6 +656,51 @@ export class ToolsRegistry {
             snippet: exportRes.content.slice(0, 300) + '...',
           },
           message: `Successfully generated ${exportRes.format.toUpperCase()} export (${exportRes.clipCount} clips, ${exportRes.totalDurationSec.toFixed(1)}s)`,
+        };
+      },
+    });
+
+    // 16. generate_captions
+    this.register({
+      name: 'generate_captions',
+      description: 'Generates timeline-synced subtitles and kinetic captions for the rough cut from Whisper word timestamps in SRT, VTT, or ASS (kinetic karaoke) format.',
+      schema: z.object({
+        format: z.enum(['srt', 'vtt', 'ass', 'json']).optional().describe('Subtitle format: srt, vtt, ass (kinetic karaoke), or json'),
+        stylePreset: z.enum(['kinetic', 'neon', 'modern', 'minimal']).optional().describe('Karaoke styling preset for ASS subtitles'),
+      }),
+      isWrite: false,
+      execute: async (ctx, args) => {
+        if (!ctx.captionsService) {
+          return {
+            ok: false,
+            code: 'INVALID_ARGUMENT',
+            message: 'Captions service is not available',
+          };
+        }
+        const format = args.format || 'srt';
+        const captionsRes = await ctx.captionsService.getCaptions(
+          ctx.assetId,
+          undefined,
+          {
+            format,
+            stylePreset: args.stylePreset || 'kinetic',
+          }
+        );
+        return {
+          ok: true,
+          data: {
+            format: captionsRes.format,
+            filename: captionsRes.filename,
+            cueCount: captionsRes.cueCount,
+            wordCount: captionsRes.wordCount,
+            totalDurationSec: captionsRes.totalDurationSec,
+            downloadUrl: `/api/assets/${ctx.assetId}/captions/${captionsRes.format}`,
+            sampleCues: captionsRes.cues.slice(0, 3).map((c) => ({
+              time: `${c.start.toFixed(2)}s - ${c.end.toFixed(2)}s`,
+              text: c.text,
+            })),
+          },
+          message: `Successfully generated ${captionsRes.cueCount} subtitle cues (${captionsRes.wordCount} words) in ${captionsRes.format.toUpperCase()} format`,
         };
       },
     });

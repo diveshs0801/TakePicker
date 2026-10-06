@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Zap, CheckCircle2, Download, Loader2, Play, Film, Copy, Check, FileCode, Sliders } from 'lucide-react';
+import { X, Zap, CheckCircle2, Download, Loader2, Play, Film, Copy, Check, FileCode, Sliders, MessageSquareText, Sparkles } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import type { Timeline, LintReport, ExportFormat } from '../../../../packages/contracts';
+import type {
+  Timeline,
+  LintReport,
+  ExportFormat,
+  SubtitleFormat,
+  SubtitleStylePreset,
+  SubtitleExportResult,
+} from '../../../../packages/contracts';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -18,7 +25,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   assetId,
   timeline,
 }) => {
-  const [activeTab, setActiveTab] = useState<'video' | 'nle'>('video');
+  const [activeTab, setActiveTab] = useState<'video' | 'nle' | 'captions'>('video');
   const [renderId, setRenderId] = useState<string | null>(null);
   const [status, setStatus] = useState<'IDLE' | 'QUEUED' | 'RENDERING' | 'MERGING' | 'DONE' | 'FAILED'>('IDLE');
   const [segmentProgress, setSegmentProgress] = useState<Record<number, number>>({});
@@ -41,6 +48,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   } | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [showPreview, setShowPreview] = useState<boolean>(false);
+
+  // AI Dynamic Captions & Subtitles State
+  const [captionFormat, setCaptionFormat] = useState<SubtitleFormat>('srt');
+  const [captionStyle, setCaptionStyle] = useState<SubtitleStylePreset>('kinetic');
+  const [captionLoading, setCaptionLoading] = useState<boolean>(false);
+  const [captionResult, setCaptionResult] = useState<SubtitleExportResult | null>(null);
+  const [captionCopied, setCaptionCopied] = useState<boolean>(false);
+  const [showCaptionCode, setShowCaptionCode] = useState<boolean>(false);
 
   const clips = timeline?.clips || [];
 
@@ -237,6 +252,59 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleGenerateCaptions = async (
+    fmt: SubtitleFormat = captionFormat,
+    style: SubtitleStylePreset = captionStyle
+  ) => {
+    if (!assetId) return;
+    setCaptionLoading(true);
+    try {
+      const res = await fetch(`/api/assets/${assetId}/captions/${fmt}?style=${style}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timeline,
+          options: {
+            format: fmt,
+            stylePreset: style,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Failed to generate captions');
+      }
+
+      const data = await res.json();
+      setCaptionResult(data);
+    } catch (err: any) {
+      console.error('Caption generation error:', err);
+    } finally {
+      setCaptionLoading(false);
+    }
+  };
+
+  const handleDownloadCaptionFile = () => {
+    if (!captionResult) return;
+    const blob = new Blob([captionResult.content], { type: captionResult.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = captionResult.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyCaptions = () => {
+    if (!captionResult) return;
+    navigator.clipboard.writeText(captionResult.content);
+    setCaptionCopied(true);
+    setTimeout(() => setCaptionCopied(false), 2000);
+  };
+
   const completedSegments = Object.values(segmentProgress).filter((p) => p >= 100).length;
   const overallSegmentPct =
     clips.length > 0
@@ -349,6 +417,33 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           >
             <Film size={15} />
             Pro NLE Interchange (XML / EDL)
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('captions');
+              if (!captionResult) {
+                handleGenerateCaptions(captionFormat, captionStyle);
+              }
+            }}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              background: activeTab === 'captions' ? 'var(--accent-gradient)' : 'transparent',
+              color: activeTab === 'captions' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <MessageSquareText size={15} />
+            AI Dynamic Captions
           </button>
         </div>
 
@@ -557,6 +652,252 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 marginBottom: '14px',
               }}>
                 {nleResult.content}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI DYNAMIC CAPTIONS & SUBTITLES TAB */}
+        {activeTab === 'captions' && (
+          <div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '10px',
+              marginBottom: '14px',
+            }}>
+              {[
+                {
+                  id: 'srt' as SubtitleFormat,
+                  title: 'SubRip Subtitles',
+                  ext: '.srt',
+                  desc: 'Standard captions for YouTube, VLC & Premiere',
+                  icon: '📄',
+                },
+                {
+                  id: 'vtt' as SubtitleFormat,
+                  title: 'WebVTT Standard',
+                  ext: '.vtt',
+                  desc: 'Web-ready subtitle track for HTML5 video',
+                  icon: '🌐',
+                },
+                {
+                  id: 'ass' as SubtitleFormat,
+                  title: 'Kinetic Karaoke',
+                  ext: '.ass',
+                  desc: 'TikTok / Shorts active word-by-word highlights',
+                  icon: '🌟',
+                },
+                {
+                  id: 'json' as SubtitleFormat,
+                  title: 'Timeline JSON Cues',
+                  ext: '.json',
+                  desc: 'Full word timestamps aligned to timeline cuts',
+                  icon: '📦',
+                },
+              ].map((fmt) => {
+                const isSelected = captionFormat === fmt.id;
+                return (
+                  <button
+                    key={fmt.id}
+                    onClick={() => {
+                      setCaptionFormat(fmt.id);
+                      handleGenerateCaptions(fmt.id, captionStyle);
+                    }}
+                    style={{
+                      textAlign: 'left',
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                      border: `1px solid ${isSelected ? '#818cf8' : 'var(--border-color)'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{fmt.icon}</span>
+                        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: isSelected ? '#ffffff' : 'var(--text-main)' }}>
+                          {fmt.title}
+                        </span>
+                      </div>
+                      <span className="font-mono" style={{ fontSize: '0.68rem', padding: '2px 5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', color: '#818cf8' }}>
+                        {fmt.ext}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.73rem', color: 'var(--text-muted)', margin: 0 }}>
+                      {fmt.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Kinetic Karaoke Style Presets Selector (for .ass) */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 14px',
+              border: '1px solid var(--border-color)',
+              marginBottom: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={14} color="#818cf8" />
+                  Karaoke Style Preset:
+                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {(['kinetic', 'neon', 'modern', 'minimal'] as SubtitleStylePreset[]).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => {
+                        setCaptionStyle(st);
+                        handleGenerateCaptions(captionFormat, st);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid',
+                        borderColor: captionStyle === st ? '#818cf8' : 'rgba(255,255,255,0.1)',
+                        backgroundColor: captionStyle === st ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                        color: captionStyle === st ? '#ffffff' : 'var(--text-muted)',
+                        fontSize: '0.72rem',
+                        cursor: 'pointer',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {st === 'kinetic' ? '🟡 TikTok' : st === 'neon' ? '💜 Neon' : st === 'modern' ? '⚪ Bold' : '📝 Clean'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {captionResult && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Alignment Summary:</span>
+                  <span style={{ color: '#34d399', fontWeight: 600 }}>
+                    {captionResult.cueCount} cues • {captionResult.wordCount} words aligned • {captionResult.totalDurationSec.toFixed(1)}s speech
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Bar */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+              <button
+                onClick={handleDownloadCaptionFile}
+                disabled={captionLoading || !captionResult}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--accent-gradient)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                  cursor: captionLoading || !captionResult ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 18px rgba(99, 102, 241, 0.4)',
+                  opacity: captionLoading || !captionResult ? 0.6 : 1,
+                }}
+              >
+                {captionLoading ? (
+                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <Download size={16} />
+                )}
+                Download {captionResult?.filename || `${captionFormat.toUpperCase()} Subtitles`}
+              </button>
+
+              <button
+                onClick={handleCopyCaptions}
+                disabled={!captionResult}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-main)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: !captionResult ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {captionCopied ? <Check size={16} color="var(--success)" /> : <Copy size={16} />}
+                {captionCopied ? 'Copied!' : 'Copy'}
+              </button>
+
+              <button
+                onClick={() => setShowCaptionCode(!showCaptionCode)}
+                disabled={!captionResult}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: showCaptionCode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--border-color)',
+                  color: showCaptionCode ? '#818cf8' : 'var(--text-main)',
+                  fontSize: '0.85rem',
+                  cursor: !captionResult ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <FileCode size={16} />
+                {showCaptionCode ? 'Hide Code' : 'Preview'}
+              </button>
+            </div>
+
+            {/* Interactive Cue Cards / Raw Code Drawer */}
+            {captionResult && (
+              <div style={{
+                maxHeight: '190px',
+                overflowY: 'auto',
+                padding: '10px 12px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                border: '1px solid var(--border-color)',
+                marginBottom: '14px',
+              }}>
+                {showCaptionCode ? (
+                  <pre style={{ margin: 0, fontSize: '0.72rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#94a3b8' }}>
+                    {captionResult.content}
+                  </pre>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {captionResult.cues?.map((cue) => (
+                      <div
+                        key={cue.index}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.78rem', color: '#f1f5f9' }}>
+                          "{cue.text}"
+                        </span>
+                        <span className="font-mono" style={{ fontSize: '0.68rem', color: '#818cf8', whiteSpace: 'nowrap' }}>
+                          {cue.start.toFixed(2)}s - {cue.end.toFixed(2)}s
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

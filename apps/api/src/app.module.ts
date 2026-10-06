@@ -10,6 +10,7 @@ import { AgentModule } from './agent/agent.module';
 import { UploadsModule } from './uploads/uploads.module';
 
 import { ExportModule } from './export/export.module';
+import { CaptionsModule } from './captions/captions.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ExportModule } from './export/export.module';
     AgentModule,
     UploadsModule,
     ExportModule,
+    CaptionsModule,
   ],
 })
 export class AppModule {}

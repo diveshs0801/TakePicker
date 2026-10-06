@@ -137,3 +137,24 @@ This document tracks every major milestone, engineering breakthrough, and archit
   - **Studio UI Export Center (`ExportModal.tsx`):** Added a tabbed navigation interface with 4 clickable preset cards, sequence renaming, direct download, copy-to-clipboard, and live syntax-highlighted code drawer.
   - **Verified Test Suite:** Automated test suite `eval/test_phase4_export.js` passed 100% with precise SMPTE timecode calculation, and Agent regression eval harness maintained **100.0% pass rate (0% variance)**.
 
+---
+
+### 🟢 Milestone 10: AI Dynamic Captions & Subtitles Engine (SRT / VTT / Kinetic Karaoke ASS)
+- **Goal:** Leverage Whisper word-level timestamps to generate frame-accurate, timeline-aligned subtitles and TikTok/Reels-style kinetic karaoke captions for rough cuts.
+- **What Was Built & Verified:**
+  - **Timeline Word Alignment (`apps/api/src/captions/captions.generator.ts`):** Automatically maps source speech timestamps onto the rough-cut edit sequence, excluding cut takes and clamping boundaries.
+  - **Natural Subtitle Chunker:** Groups words into natural, readable subtitle cues breaking on punctuation (`.`, `!`, `?`), word/character limits, and pauses (>450ms).
+  - **Multi-Format Generators:**
+    1. **SubRip (`.srt`):** Universal format with `HH:MM:SS,mmm` timecodes for YouTube, VLC, and Premiere.
+    2. **WebVTT (`.vtt`):** Modern web standard for HTML5 `<track>` playback.
+    3. **Advanced SubStation Alpha (`.ass`):** Embeds `{\k<centiseconds>}` kinetic karaoke timing tags with multiple styling presets (🟡 TikTok Vibrant Yellow, 💜 Neon Glow, ⚪ Modern Bold, 📝 Minimal Clean) for word-by-word active highlight.
+    4. **Timeline JSON (`.json`):** Full word-level timestamp array for API/client custom rendering.
+  - **API Endpoints (`CaptionsController` & `CaptionsService`):**
+    - `GET /api/assets/:id/captions` -> JSON cues preview and stats.
+    - `GET /api/assets/:id/captions/:format` -> direct attachment browser file download (`.srt`, `.vtt`, `.ass`, `.json`).
+    - `POST /api/assets/:id/captions/:format` -> client-customized timeline subtitle generation.
+  - **Agent Tool Integration:** Registered `generate_captions` tool in `tools.registry.ts` allowing the AI Agent to generate subtitles dynamically in chat.
+  - **Studio UI Export Center (`ExportModal.tsx`):** Added a 3rd tab **AI Dynamic Captions** featuring 4 format cards, karaoke style preset picker, speech duration stats badge, one-click download, copy-to-clipboard, and interactive cue cards with word timestamps.
+  - **Verified Test Suite:** Automated test suite `eval/test_phase5_captions.js` passed 100% across timestamp math, alignment, cue chunking, SRT, VTT, and ASS karaoke formats, with **100.0% agent eval pass rate (12/12)**.
+
+
