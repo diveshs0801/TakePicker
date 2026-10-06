@@ -157,4 +157,38 @@ This document tracks every major milestone, engineering breakthrough, and archit
   - **Studio UI Export Center (`ExportModal.tsx`):** Added a 3rd tab **AI Dynamic Captions** featuring 4 format cards, karaoke style preset picker, speech duration stats badge, one-click download, copy-to-clipboard, and interactive cue cards with word timestamps.
   - **Verified Test Suite:** Automated test suite `eval/test_phase5_captions.js` passed 100% across timestamp math, alignment, cue chunking, SRT, VTT, and ASS karaoke formats, with **100.0% agent eval pass rate (12/12)**.
 
+---
+
+### 🟢 Milestone 11: Dynamic Source Framerate & GPU Hardware Encoding
+- **Goal:** Eliminate hardcoded 30fps and CPU-only constraints by dynamically matching source media framerates (23.976, 24, 25, 29.97, 60fps) and auto-negotiating GPU hardware acceleration (NVIDIA NVENC, Intel QuickSync QSV).
+- **What Was Built & Verified:**
+  - **Contracts & Pipeline (`packages/contracts/index.ts`):** Added `fps`, `encoder`, and `crf` fields to `RenderSegmentJob` for per-clip hardware and framerate negotiation.
+  - **Auto Hardware Acceleration (`apps/workers/src/ffmpeg.ts`):** Implemented `detectBestEncoder()` to auto-probe `h264_nvenc` and `h264_qsv` with a 0.05s null test pipeline, falling back gracefully to `libx264`, and respecting `FFMPEG_ENCODER` environment overrides.
+  - **Segment Cache Invalidation Protection (`apps/workers/src/render.ts`):** Upgraded segment cache hash to `sha256(src:in:out:fps:encoder:crf:v2)`, preventing cross-framerate and cross-codec cache collisions between 24fps cinema and 60fps high-framerate renders.
+  - **Dynamic FPS Propagation (`apps/api/src/renders/renders.service.ts` & `apps/workers/src/render.ts`):** Timeline sequence framerate (`timeline.fps`) is automatically negotiated from source video probes and passed to worker render jobs.
+  - **Verified Test Suite:** Automated test suite `eval/test_phase6_fps_render.js` passed 100% for encoder profiles (`libx264`, `h264_nvenc`, `h264_qsv`), environment overrides, and cache key separation.
+
+---
+
+### 🟢 Milestone 12: One-Click Smart Jump-Cut & Dead-Air Silence Trimmer
+- **Goal:** Empower creators, vloggers, and podcasters to instantly remove awkward pauses, dead air, and long pauses between speech using Whisper word-level timestamps.
+- **What Was Built & Verified:**
+  - **Contracts (`packages/contracts/index.ts`):** Added `SilenceInterval`, `SilenceDetectionOptions`, `SilenceRemovalResult`, and added `JUMP_CUT` and `RESTORE_CLIPS` to `TimelineOpType`.
+  - **Silence Detection Engine (`apps/api/src/timeline/silence.detector.ts`):** Developed `detectSilences()` and `generateJumpCutTimeline()`:
+    - Identifies leading dead air before the first spoken word.
+    - Identifies inter-word pauses exceeding configurable thresholds (default 0.60s).
+    - Preserves configurable breathing room buffers (default 0.10s) around consonants and word onsets.
+    - Identifies trailing dead air after the final spoken word.
+    - Maintains frame-accurate boundary snapping, minimum 2-frame duration invariants, and clip groupings.
+  - **Timeline Service & Undo/Redo Engine (`apps/api/src/timeline/timeline.service.ts` & `timeline.ops.ts`):**
+    - Added `getSilences()` and `jumpCut()` methods to `TimelineService`.
+    - Handled `JUMP_CUT` and `RESTORE_CLIPS` in `applyOperation` with full reversible inverse operation snapshots and WebSocket broadcasting.
+  - **REST Endpoints (`apps/api/src/agent/agent.controller.ts`):**
+    - `GET /api/assets/:id/silences?minSilence=0.6&buffer=0.1` -> previews detected silences and total dead-air duration.
+    - `POST /api/assets/:id/jump-cut` -> executes atomic jump cut and returns updated timeline and statistics.
+  - **Agent Tool Integration (`apps/api/src/tools/tools.registry.ts`):** Registered `remove_silence` tool for AI Copilot chat commands (e.g. "trim out all awkward silences over 0.7s").
+  - **Studio UI Integration (`apps/web/src/components/TimelineTrack.tsx`):** Added one-click **⚡ Auto Jump-Cut** quick-action button in the timeline toolbar with live progress status and time-saved badge (`⚡ Saved X.Xs (N cuts)`).
+  - **Verified Test Suite:** Automated test suite `eval/test_phase7_silence_jumpcut.js` passed 100% across leading, inter-word, and trailing silence intervals, invariant compliance, and reversible undo/redo; Agent evaluation harness maintained **100.0% pass rate across all 12 test cases**.
+
+
 

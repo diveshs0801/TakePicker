@@ -61,16 +61,90 @@ export async function extractAudio(src: string, out: string) {
   return out;
 }
 
+let cachedEncoder: string | null = null;
+
+export async function detectBestEncoder(): Promise<string> {
+  if (cachedEncoder) return cachedEncoder;
+
+  if (process.env.FFMPEG_ENCODER) {
+    cachedEncoder = process.env.FFMPEG_ENCODER;
+    return cachedEncoder;
+  }
+
+  try {
+    const encodersOut = await run("ffmpeg", ["-encoders"]);
+    // 1. Check NVIDIA NVENC hardware acceleration
+    if (encodersOut.includes("h264_nvenc")) {
+      try {
+        await run("ffmpeg", [
+          "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.05",
+          "-c:v", "h264_nvenc", "-f", "null", "-"
+        ]);
+        cachedEncoder = "h264_nvenc";
+        return cachedEncoder;
+      } catch {
+        // Driver / CUDA device not present, fall through
+      }
+    }
+
+    // 2. Check Intel QuickSync QSV hardware acceleration
+    if (encodersOut.includes("h264_qsv")) {
+      try {
+        await run("ffmpeg", [
+          "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.05",
+          "-c:v", "h264_qsv", "-f", "null", "-"
+        ]);
+        cachedEncoder = "h264_qsv";
+        return cachedEncoder;
+      } catch {
+        // Intel QSV driver not present, fall through
+      }
+    }
+  } catch (err) {
+    console.warn("[detectBestEncoder] Warning detecting ffmpeg encoders:", err);
+  }
+
+  // Universal software fallback
+  cachedEncoder = "libx264";
+  return cachedEncoder;
+}
+
+export interface RenderOptions {
+  fps?: number;
+  encoder?: string;
+  crf?: number;
+}
+
+export function getEncoderVideoArgs(encoder: string, crf = 18): string[] {
+  switch (encoder) {
+    case "h264_nvenc":
+      return ["-c:v", "h264_nvenc", "-preset", "p4", "-cq", String(crf), "-b:v", "0"];
+    case "h264_qsv":
+      return ["-c:v", "h264_qsv", "-preset", "veryfast", "-global_quality", String(crf + 2)];
+    case "libx264":
+    default:
+      return ["-c:v", "libx264", "-preset", "veryfast", "-crf", String(crf)];
+  }
+}
+
 // Re-encode (not stream copy) so cuts are frame-accurate and all segments
 // share identical parameters, which makes the final concat -c copy safe.
-export const renderSegment = (
+export const renderSegment = async (
   src: string, inT: number, outT: number, out: string,
   onProgress: (pct: number) => void, threads = 2,
+  options?: RenderOptions,
 ) => {
   const dur = outT - inT;
+  const fps = options?.fps && options.fps > 0 ? options.fps : 30;
+  const encoder = options?.encoder || await detectBestEncoder();
+  const crf = options?.crf ?? 18;
+  const videoCodecArgs = getEncoderVideoArgs(encoder, crf);
+
   return atomic(out, (tmp) => run("ffmpeg", [
     "-y", "-ss", inT.toFixed(3), "-i", src, "-t", dur.toFixed(3),
-    "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-r", "30", "-pix_fmt", "yuv420p",
+    ...videoCodecArgs,
+    "-r", String(fps),
+    "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-ar", "48000", "-ac", "2",
     "-af", `afade=t=in:d=0.015,afade=t=out:st=${Math.max(0, dur - 0.015).toFixed(3)}:d=0.015`,
     "-threads", String(threads),

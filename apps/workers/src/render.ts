@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import path from "node:path";
 import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
-import { renderSegment, concat, isValidMedia } from "./ffmpeg";
+import { renderSegment, concat, isValidMedia, detectBestEncoder } from "./ffmpeg";
 import { runVideoLinter } from "./linter";
 import type { Timeline, RenderSegmentJob, MergeJob, ProgressEvent, Word } from "../../../packages/contracts";
 
@@ -43,6 +43,7 @@ export async function enqueueRender(renderId: string, timeline: Timeline, srcPat
         out: c.out,
         srcPath,
         outPath: path.join(dir, `seg_${String(idx).padStart(4, "0")}.mp4`),
+        fps: timeline.fps,
       } satisfies RenderSegmentJob,
     })),
   });
@@ -55,11 +56,15 @@ new Worker<RenderSegmentJob>(
     const d = job.data;
     let last = 0;
 
-    // Segment Caching (Phase 2B):
-    // Compute content hash from source path and precise in/out timestamps.
+    const targetFps = d.fps && d.fps > 0 ? d.fps : 30;
+    const encoder = d.encoder || (await detectBestEncoder());
+    const crf = d.crf ?? 18;
+
+    // Segment Caching (Phase 2B + Milestone 11):
+    // Compute content hash from source path, precise in/out timestamps, fps, encoder and crf.
     const cacheKey = crypto
       .createHash("sha256")
-      .update(`${d.srcPath}:${d.in.toFixed(3)}:${d.out.toFixed(3)}:v1`)
+      .update(`${d.srcPath}:${d.in.toFixed(3)}:${d.out.toFixed(3)}:${targetFps}:${encoder}:${crf}:v2`)
       .digest("hex");
     const cacheDir = path.join(MEDIA, "cache", "segments");
     const cachedPath = path.join(cacheDir, `${cacheKey}.mp4`);
@@ -88,7 +93,8 @@ new Worker<RenderSegmentJob>(
           pub.publish("render-progress", JSON.stringify(evt));
           pub.publish(`render:${d.renderId}`, JSON.stringify(evt));
         },
-        THREADS
+        THREADS,
+        { fps: targetFps, encoder, crf }
       );
 
       // Save valid output to segment cache for future runs

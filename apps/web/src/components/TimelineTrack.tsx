@@ -40,6 +40,8 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
   const [lintFindings, setLintFindings] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [hasScanned, setHasScanned] = useState<boolean>(false);
+  const [isTrimmingSilence, setIsTrimmingSilence] = useState<boolean>(false);
+  const [silenceResult, setSilenceResult] = useState<{ count: number; saved: number } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
@@ -57,6 +59,29 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
       console.error('Linter scan failed:', e);
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  const handleJumpCutSilence = async () => {
+    if (!assetId) return;
+    setIsTrimmingSilence(true);
+    try {
+      const res = await fetch(`/api/assets/${assetId}/jump-cut`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minSilenceSec: 0.6, bufferSec: 0.1 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSilenceResult({
+          count: data.silencesDetected,
+          saved: data.timeSaved,
+        });
+      }
+    } catch (e) {
+      console.error('Jump cut failed:', e);
+    } finally {
+      setIsTrimmingSilence(false);
     }
   };
 
@@ -236,6 +261,41 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
                 : hasScanned
                 ? `${lintFindings.length} Defects Found`
                 : 'Scan Quality (D1-D7)'}
+            </span>
+          </button>
+
+          {/* Auto Jump-Cut / Smart Silence Trimmer Button */}
+          <button
+            type="button"
+            onClick={handleJumpCutSilence}
+            disabled={isTrimmingSilence || !assetId}
+            title="Automatically detects pauses and trims dead air (Jump-Cut)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '5px 10px',
+              borderRadius: 'var(--radius-sm)',
+              background: silenceResult
+                ? 'rgba(139, 92, 246, 0.22)'
+                : 'rgba(99, 102, 241, 0.15)',
+              border: silenceResult
+                ? '1px solid rgba(139, 92, 246, 0.5)'
+                : '1px solid rgba(99, 102, 241, 0.4)',
+              color: silenceResult ? '#c4b5fd' : '#a5b4fc',
+              cursor: isTrimmingSilence || !assetId ? 'wait' : 'pointer',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+            }}
+          >
+            <Scissors size={13} />
+            <span>
+              {isTrimmingSilence
+                ? 'Trimming Dead Air...'
+                : silenceResult
+                ? `⚡ Saved ${silenceResult.saved.toFixed(1)}s (${silenceResult.count} cuts)`
+                : '⚡ Auto Jump-Cut'}
             </span>
           </button>
         </div>

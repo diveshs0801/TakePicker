@@ -704,6 +704,39 @@ export class ToolsRegistry {
         };
       },
     });
+
+    // 17. remove_silence (One-Click Jump Cut & Smart Silence Trimmer)
+    this.register({
+      name: 'remove_silence',
+      description: 'Detects and cuts out dead air and long pauses between speech (smart jump-cut) using Whisper word timestamps while preserving natural breathing room buffers.',
+      schema: z.object({
+        minSilenceSec: z.number().positive().optional().describe('Minimum pause duration in seconds to consider silence (default: 0.6)'),
+        bufferSec: z.number().nonnegative().optional().describe('Breathing room buffer in seconds to keep around spoken words (default: 0.1)'),
+      }),
+      isWrite: true,
+      execute: async (ctx, args) => {
+        const result = await ctx.timelineService.jumpCut(
+          ctx.assetId,
+          {
+            minSilenceSec: args.minSilenceSec ?? 0.6,
+            bufferSec: args.bufferSec ?? 0.1,
+          },
+          'agent',
+          ctx.agentRunId
+        );
+        return {
+          ok: true,
+          data: {
+            silencesDetected: result.silencesDetected,
+            totalSilenceDuration: result.totalSilenceDuration,
+            timeSaved: result.timeSaved,
+            newClipsCount: result.newClipsCount,
+            intervalsCount: result.intervals.length,
+          },
+          message: `Jump-cut successfully applied: removed ${result.silencesDetected} dead-air pauses, saving ${result.timeSaved.toFixed(2)}s of silence (${result.newClipsCount} clips remaining)`,
+        };
+      },
+    });
   }
 }
 

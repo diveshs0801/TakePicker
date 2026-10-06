@@ -320,6 +320,36 @@ export function applyOperation(
       };
     }
 
+    case 'JUMP_CUT': {
+      const { clips: newClips } = payload;
+      const previousClips = [...timeline.clips];
+      const newTimeline: Timeline = { ...timeline, clips: newClips };
+      validateTimelineInvariants(newTimeline, assetDuration);
+
+      return {
+        newTimeline,
+        inverseOp: {
+          opType: 'RESTORE_CLIPS',
+          payload: { clips: previousClips },
+        },
+      };
+    }
+
+    case 'RESTORE_CLIPS': {
+      const { clips: restoredClips } = payload;
+      const previousClips = [...timeline.clips];
+      const newTimeline: Timeline = { ...timeline, clips: restoredClips };
+      validateTimelineInvariants(newTimeline, assetDuration);
+
+      return {
+        newTimeline,
+        inverseOp: {
+          opType: 'RESTORE_CLIPS',
+          payload: { clips: previousClips },
+        },
+      };
+    }
+
     default:
       throw new TimelineInvariantViolation(`Unknown opType: "${opType}"`, 'INVALID_ARGUMENT');
   }

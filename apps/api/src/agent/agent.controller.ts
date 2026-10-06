@@ -80,4 +80,31 @@ export class AgentController {
       timeline: res.timeline,
     };
   }
+
+  @Get('assets/:id/silences')
+  async getSilences(
+    @Param('id') assetId: string,
+    @Query('minSilence') minSilence?: string,
+    @Query('buffer') buffer?: string
+  ) {
+    const minSilenceSec = minSilence ? parseFloat(minSilence) : 0.6;
+    const bufferSec = buffer ? parseFloat(buffer) : 0.1;
+    return await this.timelineService.getSilences(assetId, { minSilenceSec, bufferSec });
+  }
+
+  @Post('assets/:id/jump-cut')
+  async applyJumpCut(
+    @Param('id') assetId: string,
+    @Body() body?: { minSilenceSec?: number; bufferSec?: number }
+  ) {
+    return await this.timelineService.jumpCut(
+      assetId,
+      {
+        minSilenceSec: body?.minSilenceSec ?? 0.6,
+        bufferSec: body?.bufferSec ?? 0.1,
+      },
+      'user'
+    );
+  }
 }
+

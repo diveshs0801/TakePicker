@@ -70,6 +70,7 @@ export class RendersService {
           out: clip.out,
           srcPath,
           outPath: path.join(renderDir, `seg_${String(idx).padStart(4, '0')}.mp4`),
+          fps: timeline.fps,
         } satisfies RenderSegmentJob,
       })),
     });

@@ -92,6 +92,9 @@ export interface RenderSegmentJob {
   out: number;
   srcPath: string;
   outPath: string;
+  fps?: number;
+  encoder?: string;
+  crf?: number;
 }
 
 export interface MergeJob {
@@ -123,7 +126,9 @@ export type TimelineOpType =
   | 'TRIM'
   | 'SPLIT'
   | 'MOVE'
-  | 'SELECT_TAKE';
+  | 'SELECT_TAKE'
+  | 'JUMP_CUT'
+  | 'RESTORE_CLIPS';
 
 export type TimeDomain = 'timeline' | 'source';
 
@@ -299,5 +304,26 @@ export interface SubtitleExportResult {
   cues: SubtitleCue[];
 }
 
+// --- Milestone 12: Silence Detection & Smart Jump-Cut ---
+export interface SilenceInterval {
+  start: number;
+  end: number;
+  duration: number;
+  precedingWord?: string;
+  followingWord?: string;
+}
 
+export interface SilenceDetectionOptions {
+  minSilenceSec?: number; // threshold in seconds, default: 0.60
+  bufferSec?: number;     // pad/breathing room around words, default: 0.10
+}
 
+export interface SilenceRemovalResult {
+  assetId: string;
+  silencesDetected: number;
+  totalSilenceDuration: number;
+  timeSaved: number;
+  newClipsCount: number;
+  timeline: Timeline;
+  intervals: SilenceInterval[];
+}

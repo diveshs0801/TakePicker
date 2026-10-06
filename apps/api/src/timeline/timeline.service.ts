@@ -15,6 +15,9 @@ import {
   StructuredError,
   snapToFrame,
   TimeDomain,
+  SilenceInterval,
+  SilenceDetectionOptions,
+  SilenceRemovalResult,
 } from '../../../../packages/contracts';
 import {
   applyOperation,
@@ -27,6 +30,7 @@ import {
   computeTimelineSpans,
   TimelineInvariantViolation,
 } from './timeline.invariants';
+import { detectSilences, generateJumpCutTimeline } from './silence.detector';
 import { randomUUID } from 'node:crypto';
 
 export class StructuredOpException extends BadRequestException {
@@ -449,4 +453,91 @@ export class TimelineService {
 
     return { timeline, seq: currentSeq, removedCount: count };
   }
+
+  /**
+   * Detects silent dead-air intervals in the timeline from Whisper transcripts.
+   */
+  async getSilences(
+    assetId: string,
+    options?: SilenceDetectionOptions
+  ): Promise<{ silences: SilenceInterval[]; totalDuration: number }> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    const transcriptRes = await this.db.query(
+      'SELECT words FROM transcripts WHERE asset_id = $1',
+      [assetId]
+    );
+    const words = transcriptRes.rows[0]?.words || [];
+    const silences = detectSilences(timeline, words, options);
+    const totalDuration = snapToFrame(
+      silences.reduce((acc, s) => acc + s.duration, 0),
+      timeline.fps || 30
+    );
+    return { silences, totalDuration };
+  }
+
+  /**
+   * Applies smart jump-cutting to remove dead-air silences from timeline clips.
+   */
+  async jumpCut(
+    assetId: string,
+    options?: SilenceDetectionOptions,
+    actor: 'user' | 'agent' = 'user',
+    agentRunId?: string
+  ): Promise<SilenceRemovalResult> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    const transcriptRes = await this.db.query(
+      'SELECT words FROM transcripts WHERE asset_id = $1',
+      [assetId]
+    );
+    const words = transcriptRes.rows[0]?.words || [];
+
+    const { newTimeline, silences, timeSaved } = generateJumpCutTimeline(
+      timeline,
+      words,
+      options
+    );
+
+    if (silences.length === 0) {
+      return {
+        assetId,
+        silencesDetected: 0,
+        totalSilenceDuration: 0,
+        timeSaved: 0,
+        newClipsCount: timeline.clips.length,
+        timeline,
+        intervals: [],
+      };
+    }
+
+    if (newTimeline.clips.length === 0) {
+      throw new StructuredOpException({
+        ok: false,
+        code: 'OUT_OF_RANGE',
+        message: 'Cannot jump-cut: entire timeline would be eliminated as silence.',
+      });
+    }
+
+    const res = await this.applyOp(
+      assetId,
+      'JUMP_CUT',
+      {
+        clips: newTimeline.clips,
+        removedSilenceDuration: timeSaved,
+        silencesCount: silences.length,
+      },
+      actor,
+      agentRunId
+    );
+
+    return {
+      assetId,
+      silencesDetected: silences.length,
+      totalSilenceDuration: timeSaved,
+      timeSaved,
+      newClipsCount: res.timeline.clips.length,
+      timeline: res.timeline,
+      intervals: silences,
+    };
+  }
 }
+
