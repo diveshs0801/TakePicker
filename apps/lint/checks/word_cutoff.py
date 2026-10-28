@@ -21,8 +21,8 @@ def check_word_cutoffs(
         return findings
 
     for seg_idx, seg in enumerate(timeline_segments):
-        start_t = seg.get("start_time", seg.get("in_point", 0.0))
-        end_t = seg.get("end_time", seg.get("out_point", 0.0))
+        start_t = seg.get("start_time", seg.get("in_point", seg.get("in", 0.0)))
+        end_t = seg.get("end_time", seg.get("out_point", seg.get("out", 0.0)))
 
         # Check cut at start
         for word in words:

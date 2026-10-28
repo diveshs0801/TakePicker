@@ -106,5 +106,17 @@ export class AgentController {
       'user'
     );
   }
+
+  @Post('assets/:id/remove-fillers')
+  async removeFillers(
+    @Param('id') assetId: string,
+    @Body() body?: { scope?: string }
+  ) {
+    return await this.timelineService.removeFillers(
+      assetId,
+      body?.scope || 'all',
+      'user'
+    );
+  }
 }
 

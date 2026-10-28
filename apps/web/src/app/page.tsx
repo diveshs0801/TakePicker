@@ -248,6 +248,8 @@ export default function Home() {
               currentTime={currentTime}
               onSeek={handleSeek}
               assetId={currentAsset?.id}
+              groups={groups}
+              onSelectTake={handleSelectTake}
             />
           </div>
 

@@ -211,9 +211,22 @@ export class AssetsService {
   }
 
   async lintAsset(id: string) {
+    const cachePath = path.join(MEDIA, 'assets', id, 'lint_findings.json');
+    try {
+      const cached = await fs.readFile(cachePath, 'utf-8');
+      return JSON.parse(cached);
+    } catch {}
+
     const asset = await this.getAsset(id);
     const transcript = await this.getTranscript(id);
     const timeline = await this.getTimeline(id);
+
+    const proxyPath = path.join(MEDIA, 'assets', id, 'proxy.mp4');
+    let srcPath = path.join(MEDIA, asset.storage_key);
+    try {
+      await fs.access(proxyPath);
+      srcPath = proxyPath;
+    } catch {}
 
     const analysisUrl = process.env.ANALYSIS_URL || 'http://analysis:8000';
     const res = await fetch(`${analysisUrl}/lint`, {
@@ -221,7 +234,7 @@ export class AssetsService {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         assetId: id,
-        srcPath: path.join(MEDIA, asset.storage_key),
+        srcPath,
         words: transcript.words,
         timeline,
       }),
@@ -232,7 +245,12 @@ export class AssetsService {
       throw new BadRequestException(`Linter failed: ${errText}`);
     }
 
-    return res.json();
+    const data = await res.json();
+    try {
+      await fs.writeFile(cachePath, JSON.stringify(data), 'utf-8');
+    } catch {}
+
+    return data;
   }
 }
 

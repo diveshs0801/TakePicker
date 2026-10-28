@@ -332,8 +332,14 @@ export class TimelineService {
     let rangeEnd = end;
 
     if (domain === 'source') {
-      rangeStart = sourceToTimeline(timeline, timeline.clips[0].id, start);
-      rangeEnd = sourceToTimeline(timeline, timeline.clips[0].id, end);
+      const targetClip = timeline.clips.find(
+        (c) => start >= c.in - 0.05 && end <= c.out + 0.05
+      );
+      if (!targetClip) {
+        return { timeline, seq: currentSeq };
+      }
+      rangeStart = sourceToTimeline(timeline, targetClip.id, start);
+      rangeEnd = sourceToTimeline(timeline, targetClip.id, end);
     }
 
     const spans = computeTimelineSpans(timeline);

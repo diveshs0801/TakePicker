@@ -1,12 +1,13 @@
+# Dependencies & Build Artifacts
 node_modules/
 dist/
 .next/
 out/
 build/
-*.tmp.mp4
-.env
-.env*.local
-*.zip
+
+# Rust / Cargo Build Artifacts
+target/
+**/target/
 
 # Python
 __pycache__/
@@ -16,12 +17,45 @@ __pycache__/
 venv/
 env/
 
-# Media storage
+# Environment Variables & Secrets
+.env
+.env.*
+*.env
+!.env.example
+
+# Video & Audio Files (Raw Footage, Clips, Exports)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.flv
+*.wmv
+*.m4v
+*.wav
+*.mp3
 media/
 samples/*.mp4
 !samples/.gitkeep
 
+# Personal & Career Documents (Resume, Interview Prep Guides)
+*resume*
+*Resume*
+*.pdf
+*interview*
+*Interview*
+TakePicker_Interview_Master_Guide.*
+scripts/generate_interview_guide.py
+
+# Archives & Temp Files
+*.zip
+*.tar.gz
+*.tgz
+*.bak
+*.tmp
+
 # IDE & OS
 .DS_Store
+Thumbs.db
 .vscode/
 .idea/

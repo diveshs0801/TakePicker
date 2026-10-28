@@ -1,3 +1,4 @@
+import http from "node:http";
 import { Worker, Job } from "bullmq";
 import IORedis from "ioredis";
 import { Pool } from "pg";
@@ -10,6 +11,43 @@ const pub = new IORedis(process.env.REDIS_URL!);
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const MEDIA = process.env.MEDIA_DIR ?? "/media";
 const ANALYSIS_URL = process.env.ANALYSIS_URL ?? "http://analysis:8000";
+
+function postJson(urlStr: string, body: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const payload = JSON.stringify(body);
+    const req = http.request(
+      {
+        hostname: u.hostname,
+        port: u.port || 80,
+        path: u.pathname + u.search,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        let raw = "";
+        res.on("data", (chunk) => (raw += chunk));
+        res.on("end", () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              resolve(JSON.parse(raw));
+            } catch (e) {
+              reject(new Error(`Invalid JSON from analysis: ${raw.slice(0, 200)}`));
+            }
+          } else {
+            reject(new Error(`Analysis failed (${res.statusCode}): ${raw.slice(0, 200)}`));
+          }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
+}
 
 interface IngestJobData {
   assetId: string;
@@ -57,22 +95,11 @@ new Worker<IngestJobData>(
 
       // 3. Audio analysis (Whisper transcription + retake clustering + scoring)
       await updateStatus(assetId, "ANALYZING");
-      const res = await fetch(`${ANALYSIS_URL}/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assetId,
-          audioPath,
-          fps: meta.fps,
-        }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Analysis service failed (${res.status}): ${errText}`);
-      }
-
-      const analysisData = (await res.json()) as {
+      const analysisData = (await postJson(`${ANALYSIS_URL}/analyze`, {
+        assetId,
+        audioPath,
+        fps: meta.fps,
+      })) as {
         words: any[];
         segments: any[];
         groups: any[];

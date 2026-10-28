@@ -397,15 +397,30 @@ def lint_asset(req: LintRequest):
     if not os.path.exists(req.srcPath):
         raise HTTPException(status_code=404, detail=f"Source video not found: {req.srcPath}")
 
+    cache_path = os.path.join(os.path.dirname(req.srcPath), "lint_findings.json")
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+                return cached
+        except Exception:
+            pass
+
     try:
         from lint.lint import run_lint, load_config
         config = load_config()
         findings = run_lint(req.srcPath, config, words=req.words, timeline=req.timeline)
-        return {
+        result = {
             "assetId": req.assetId,
             "findings": findings,
             "count": len(findings)
         }
+        try:
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(result, f)
+        except Exception:
+            pass
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
