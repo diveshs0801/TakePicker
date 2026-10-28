@@ -11,11 +11,13 @@ import { AgentPanel } from '../components/AgentPanel';
 import { SystemGuideModal } from '../components/SystemGuideModal';
 import { ProjectHub } from '../components/ProjectHub';
 import { VersionMergeModal } from '../components/VersionMergeModal';
+import { LeftSidebar } from '../components/LeftSidebar';
+import { VersionGraphWorkspace } from '../components/VersionGraphWorkspace';
 import { io, Socket } from 'socket.io-client';
 import type { Asset, TakeGroup, Timeline, AssetStatus, ConflictResolutionStrategy } from '../../../../packages/contracts';
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'studio' | 'hub'>('studio');
+  const [currentView, setCurrentView] = useState<'studio' | 'hub' | 'versions'>('studio');
   const [allAssets, setAllAssets] = useState<Asset[]>([]);
   const [currentAsset, setCurrentAsset] = useState<Asset | null>(null);
   const [groups, setGroups] = useState<TakeGroup[]>([]);
@@ -282,29 +284,52 @@ export default function Home() {
             onOpenStudio={() => setCurrentView('studio')}
           />
         </div>
+      ) : currentView === 'versions' ? (
+        /* Dedicated Version Control & Git Graph Workspace (Cardboard AI Problem #10) */
+        <VersionGraphWorkspace
+          currentBranch={currentBranch}
+          onBranchChange={setCurrentBranch}
+          onOpenMergeModal={() => setIsMergeModalOpen(true)}
+          onBackToStudio={() => setCurrentView('studio')}
+        />
       ) : (
-        /* Professional Broadcast Studio NLE Layout */
+        /* Professional Broadcast Studio NLE Layout (Left Bins + Center Monitor + Right Inspector + Bottom Timeline) */
         <main style={{
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
           height: 'calc(100vh - 52px)',
           overflow: 'hidden',
-          padding: '10px 14px 10px 14px',
-          gap: '10px',
-          boxSizing: 'border-box',
+          backgroundColor: '#04060b',
         }}>
-          {/* Top Half: Video Monitor (Left) + AI Inspector (Right) */}
+          {/* Top Half: Left Media/Git Bins (Left) + Video Monitor (Center) + AI Inspector (Right) */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.45fr) 420px',
-            gap: '12px',
+            display: 'flex',
             flex: '1 1 54%',
             minHeight: '280px',
             overflow: 'hidden',
+            borderBottom: '1px solid var(--border-color)',
           }}>
-            {/* Broadcast Video Monitor */}
-            <div style={{ height: '100%', overflow: 'hidden' }}>
+            {/* Left Drawer: Media Bins & Project Organizer */}
+            <LeftSidebar
+              currentAsset={currentAsset}
+              allAssets={allAssets}
+              onSelectAsset={(id) => loadAsset(id)}
+              currentBranch={currentBranch}
+              onBranchChange={setCurrentBranch}
+              onOpenMergeModal={() => setIsMergeModalOpen(true)}
+              qualityScore={qualityScore}
+              onOpenUpload={() => setIsUploadOpen(true)}
+            />
+
+            {/* Center: Broadcast Video Monitor */}
+            <div style={{
+              flex: 1,
+              height: '100%',
+              overflow: 'hidden',
+              padding: '8px 10px',
+              backgroundColor: '#05070e',
+            }}>
               <WebCodecsPlayer
                 ref={playerRef}
                 src={videoSourceUrl}
@@ -313,16 +338,16 @@ export default function Home() {
               />
             </div>
 
-            {/* AI Copilot & Retake Inspector Side Dock */}
+            {/* Right: AI Copilot & Retake Inspector Side Dock */}
             <div style={{
+              width: '420px',
+              minWidth: '420px',
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
               backgroundColor: '#070a13',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-color)',
+              borderLeft: '1px solid var(--border-color)',
               overflow: 'hidden',
-              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
             }}>
               {/* Tab Selector Header */}
               <div style={{

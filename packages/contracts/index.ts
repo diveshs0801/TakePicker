@@ -8,6 +8,7 @@ export type RenderStatus = "QUEUED" | "RENDERING" | "MERGING" | "DONE" | "FAILED
 
 export interface Word {
   w: string;
+  word?: string; // Alias for w
   start: number;
   end: number;
   prob: number;
@@ -129,6 +130,7 @@ export type TimelineOpType =
   | 'INSERT'
   | 'DELETE'
   | 'TRIM'
+  | 'TRIM_CLIP'
   | 'SPLIT'
   | 'MOVE'
   | 'SELECT_TAKE'
@@ -227,9 +229,9 @@ export type DefectCheckType =
   | 'D4_loudness_jump'
   | 'D5_av_desync';
 
-export interface LintFinding {
+export interface LegacyLintFinding {
   check: DefectCheckType | string;
-  severity: 'error' | 'warn';
+  severity: 'error' | 'warn' | 'warning';
   start: number;
   end: number;
   message: string;
@@ -245,7 +247,7 @@ export interface LintReport {
   renderId: string;
   assetId: string;
   defectCount: number;
-  findings: LintFinding[];
+  findings: (LintFinding | LegacyLintFinding)[];
   duration?: number;
   lintTimeSec?: number;
   passed: boolean;
@@ -337,7 +339,7 @@ export interface SilenceRemovalResult {
 // Cardboard AI Hard Problem #09: Video Verification & Linting Engine
 // ==============================================================================
 
-export type LintSeverity = 'error' | 'warning' | 'info';
+export type LintSeverity = 'error' | 'warn' | 'warning' | 'info';
 export type LintCategory = 'technical' | 'pacing' | 'audio' | 'cadence' | 'narrative' | 'brand' | 'sync';
 
 export type LintRuleId =
@@ -373,6 +375,9 @@ export interface LintFinding {
   endTimestamp?: number;      // Optional end timestamp
   clipId?: string;
   sourceTimestamp?: number;   // In source asset time
+  check?: string;             // Backward-compatibility alias
+  start?: number;             // Backward-compatibility alias
+  end?: number;               // Backward-compatibility alias
   details?: Record<string, any>;
   suggestedRepair?: {
     opType: 'trim_clip' | 'split_clip' | 'remove_range' | 'snap_bounds' | 'restore_context' | 'realign_sync';

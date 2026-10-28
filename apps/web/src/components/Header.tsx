@@ -25,8 +25,8 @@ import type { Asset } from '../../../../packages/contracts';
 
 interface HeaderProps {
   currentAsset: Asset | null;
-  currentView: 'studio' | 'hub';
-  onViewChange: (view: 'studio' | 'hub') => void;
+  currentView: 'studio' | 'hub' | 'versions';
+  onViewChange: (view: 'studio' | 'hub' | 'versions') => void;
   onOpenUpload: () => void;
   onOpenExport: () => void;
   onLoadDemoAsset: () => void;
@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '8px 20px',
+      padding: '8px 18px',
       borderBottom: '1px solid var(--border-color)',
       backgroundColor: '#070912',
       position: 'sticky',
@@ -72,40 +72,40 @@ export const Header: React.FC<HeaderProps> = ({
       height: '52px',
       boxSizing: 'border-box',
     }}>
-      {/* 1. Left: Brand & Studio Mode */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      {/* 1. Left: Brand & Professional Workspace Tabs (DaVinci Resolve Style) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
+            width: '30px',
+            height: '30px',
+            borderRadius: '7px',
             background: 'var(--accent-gradient)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 12px rgba(99, 102, 241, 0.4)',
+            boxShadow: '0 2px 10px rgba(99, 102, 241, 0.4)',
           }}>
-            <Film size={18} color="#ffffff" />
+            <Film size={16} color="#ffffff" />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.05rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '1.0rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
               TakePicker
             </span>
             <span style={{
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              padding: '1px 6px',
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              padding: '1px 5px',
               borderRadius: '4px',
               background: 'rgba(99, 102, 241, 0.18)',
               color: '#a5b4fc',
               border: '1px solid rgba(99, 102, 241, 0.35)',
             }}>
-              STUDIO PRO
+              STUDIO
             </span>
           </div>
         </div>
 
-        {/* View Switcher: Studio Workspace vs Project Hub */}
+        {/* DaVinci Resolve Style Workspace Mode Switcher */}
         <div style={{
           display: 'flex',
           background: 'rgba(0, 0, 0, 0.45)',
@@ -119,20 +119,42 @@ export const Header: React.FC<HeaderProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '5px 12px',
+              gap: '5px',
+              padding: '5px 11px',
               borderRadius: '4px',
               border: 'none',
               background: currentView === 'studio' ? 'rgba(99, 102, 241, 0.28)' : 'transparent',
               color: currentView === 'studio' ? '#ffffff' : 'var(--text-muted)',
-              fontWeight: 600,
-              fontSize: '0.78rem',
+              fontWeight: 700,
+              fontSize: '0.76rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
           >
             <SlidersHorizontal size={13} color={currentView === 'studio' ? '#818cf8' : 'currentColor'} />
-            <span>Studio Workspace</span>
+            <span>Studio NLE</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onViewChange('versions')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '5px 11px',
+              borderRadius: '4px',
+              border: 'none',
+              background: currentView === 'versions' ? 'rgba(168, 85, 247, 0.28)' : 'transparent',
+              color: currentView === 'versions' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 700,
+              fontSize: '0.76rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <GitBranch size={13} color={currentView === 'versions' ? '#c084fc' : 'currentColor'} />
+            <span>Version Graph (Git)</span>
           </button>
 
           <button
@@ -141,20 +163,18 @@ export const Header: React.FC<HeaderProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '5px 12px',
+              gap: '5px',
+              padding: '5px 11px',
               borderRadius: '4px',
               border: 'none',
               background: currentView === 'hub' ? 'rgba(99, 102, 241, 0.28)' : 'transparent',
               color: currentView === 'hub' ? '#ffffff' : 'var(--text-muted)',
-              fontWeight: 600,
-              fontSize: '0.78rem',
+              fontWeight: 700,
+              fontSize: '0.76rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
           >
-            <FolderKanban size={13} color={currentView === 'hub' ? '#818cf8' : 'currentColor'} />
-            <span>Projects Hub</span>
           </button>
         </div>
 
@@ -278,71 +298,67 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Cardboard AI Problem #10: Version Control & Cut Selector */}
-      {currentAsset && (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+      }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
+          background: 'rgba(99, 102, 241, 0.12)',
+          border: '1px solid rgba(99, 102, 241, 0.3)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '3px 8px',
+          fontSize: '0.74rem',
+          color: '#c7d2fe',
         }}>
-          <div style={{
+          <GitBranch size={13} color="#818cf8" />
+          <select
+            value={currentBranch}
+            onChange={(e) => onBranchChange?.(e.target.value)}
+            title="Switch Cut / Version Branch"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '0.74rem',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="main" style={{ background: '#0c0f1d' }}>🌿 main (Master Cut)</option>
+            <option value="sarah/pacing" style={{ background: '#0c0f1d' }}>🌿 sarah/pacing (Lead Cut)</option>
+            <option value="alex/sound-design" style={{ background: '#0c0f1d' }}>🌿 alex/sound-design (B-Roll Cut)</option>
+            <option value="agent/auto-tighten" style={{ background: '#0c0f1d' }}>🌿 agent/auto-tighten (AI Pacing)</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpenMergeModal?.()}
+          title="Cardboard AI Problem #10: 3-Way Timeline Merge & Audition Resolver"
+          style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid rgba(99, 102, 241, 0.28)',
+            gap: '5px',
+            padding: '4px 10px',
             borderRadius: 'var(--radius-sm)',
-            padding: '3px 8px',
-            fontSize: '0.74rem',
-            color: '#c7d2fe',
-          }}>
-            <GitBranch size={13} color="#818cf8" />
-            <select
-              value={currentBranch}
-              onChange={(e) => onBranchChange?.(e.target.value)}
-              title="Switch Cut / Version Branch"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.74rem',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="main" style={{ background: '#0c0f1d' }}>🌿 main (Master Cut)</option>
-              <option value="sarah/pacing" style={{ background: '#0c0f1d' }}>🌿 sarah/pacing (Lead Cut)</option>
-              <option value="alex/sound-design" style={{ background: '#0c0f1d' }}>🌿 alex/sound-design (B-Roll Cut)</option>
-              <option value="agent/auto-tighten" style={{ background: '#0c0f1d' }}>🌿 agent/auto-tighten (AI Pacing)</option>
-            </select>
-          </div>
-
-          {onOpenMergeModal && (
-            <button
-              type="button"
-              onClick={onOpenMergeModal}
-              title="Cardboard AI Problem #10: 3-Way Timeline Merge & Audition Resolver"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
-                border: '1px solid rgba(168, 85, 247, 0.35)',
-                color: '#e0e7ff',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <GitMerge size={12} color="#c084fc" />
-              <span>Review & Merge</span>
-            </button>
-          )}
-        </div>
-      )}
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+            border: '1px solid rgba(168, 85, 247, 0.35)',
+            color: '#e0e7ff',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <GitMerge size={12} color="#c084fc" />
+          <span>Review & Merge</span>
+        </button>
+      </div>
 
       {/* 3. Right: Action Buttons */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

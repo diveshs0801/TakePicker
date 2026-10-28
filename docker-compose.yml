@@ -44,7 +44,7 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://tp:tp@postgres:5432/takepicker
       MEDIA_DIR: /media
-      NODE_OPTIONS: "--max-old-space-size=256"
+      NODE_OPTIONS: "--max-old-space-size=512"
       # Live LLM Integration (DeepSeek, Groq, Gemini, Ollama, OpenRouter, etc.)
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 768M
 
   web:
     build:
@@ -74,13 +74,13 @@ services:
     environment:
       API_URL: http://api:3000
       PORT: 3001
-      NODE_OPTIONS: "--max-old-space-size=256"
+      NODE_OPTIONS: "--max-old-space-size=768"
     ports: ["3001:3001"]
     depends_on: [api]
     deploy:
       resources:
         limits:
-          memory: 384M
+          memory: 1024M
 
   ingest-worker:
     build:
