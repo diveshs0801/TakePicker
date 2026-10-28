@@ -333,7 +333,7 @@ export interface SilenceRemovalResult {
 // ==============================================================================
 
 export type LintSeverity = 'error' | 'warning' | 'info';
-export type LintCategory = 'technical' | 'pacing' | 'audio' | 'cadence';
+export type LintCategory = 'technical' | 'pacing' | 'audio' | 'cadence' | 'narrative' | 'brand' | 'sync';
 
 export type LintRuleId =
   | 'WORD_CUTOFF'               // Tier 1: Cut intersects a spoken word token
@@ -342,11 +342,17 @@ export type LintRuleId =
   | 'UNSNAPPED_FRAME_GRID'     // Tier 1: Timestamp not locked to video FPS grid
   | 'ZERO_DURATION_CLIP'       // Tier 1: Degenerate in >= out clip
   | 'OUT_OF_BOUNDS_CLIP'       // Tier 1: Clip out point exceeds asset duration
+  | 'AV_SYNC_DRIFT'            // Tier 1: ITU-R BT.1359 audio/video lip-sync phase drift (>+45ms / <-125ms)
+  | 'DANGLING_PRONOUN'         // Tier 2 (Narrative): Orphan pronoun (he/she/it/this) missing antecedent
+  | 'BROKEN_CAUSAL_CONNECTIVE' // Tier 2 (Narrative): Orphan discourse marker (therefore/because) missing premise
+  | 'STORY_ARC_DEFICIT'        // Tier 2 (Narrative): Missing 3-second hook or abrupt unresolved ending
+  | 'BRAND_SAFE_ZONE_VIOLATION'// Tier 2 (Brand): Visual element violates 80% Title Safe boundary
   | 'HOOK_DEAD_AIR'            // Tier 2: First spoken word delayed > 1.0s in hook window
   | 'SHOT_PACING_STAGNATION'   // Tier 2: Single clip duration > 12.0s without cut
   | 'DEAD_AIR_DENSITY'         // Tier 2: Excessive pause duration (> 15% of timeline)
   | 'RAPID_FIRE_CUT_CLUSTER'   // Tier 2: > 3 cuts in < 1.0s causing visual flutter
   | 'SPEECH_CADENCE_WPM'       // Tier 2: Conversational rate out of optimal bounds (<110 or >210 WPM)
+  | 'RETENTION_DROP_RISK'      // Tier 2: High probability of viewer drop-off predicted by retention model
   | 'D1_BLACK_FRAMES'          // Dynamic: Black frame sequence detected
   | 'D2_FROZEN_VIDEO'          // Dynamic: Repeated frozen frames detected
   | 'D3_AUDIO_DROPOUT'         // Dynamic: Muted audio dropout detected
@@ -364,7 +370,7 @@ export interface LintFinding {
   sourceTimestamp?: number;   // In source asset time
   details?: Record<string, any>;
   suggestedRepair?: {
-    opType: 'trim_clip' | 'split_clip' | 'remove_range' | 'snap_bounds';
+    opType: 'trim_clip' | 'split_clip' | 'remove_range' | 'snap_bounds' | 'restore_context' | 'realign_sync';
     clipId?: string;
     suggestedIn?: number;
     suggestedOut?: number;
@@ -372,12 +378,25 @@ export interface LintFinding {
   };
 }
 
+export interface RetentionCurvePoint {
+  timeSec: number;
+  retentionPct: number;       // 0 to 100 predicted viewer retention
+  penaltyFactor: number;      // Pacing or defect penalty at this timestamp
+}
+
 export interface TimelineLintReport {
   valid: boolean;
   score: number;               // 0 to 100 composite verification score
   tier1Passed: boolean;        // Zero-glitch technical floor passed
   tier2Passed: boolean;        // Editorial & pacing quality passed
+  storyArcPassed: boolean;     // Narrative continuity & discourse coherent
   findings: LintFinding[];
+  retentionPrediction?: {
+    overallRetentionScore: number;     // 0 to 100 predicted platform engagement
+    threeSecondHookRetention: number;  // % of viewers held through 3s mark
+    thirtySecondRetention: number;     // % of viewers held through 30s mark
+    curve: RetentionCurvePoint[];
+  };
   metrics: {
     totalDuration: number;
     clipCount: number;
@@ -388,6 +407,7 @@ export interface TimelineLintReport {
     hookLatencySeconds: number;
     errorCount: number;
     warningCount: number;
+    storyCoherenceScore: number;       // 0 to 100
   };
   suggestedRepairs: Array<{
     rule: LintRuleId;

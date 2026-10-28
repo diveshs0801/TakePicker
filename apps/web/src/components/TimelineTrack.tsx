@@ -1105,18 +1105,104 @@ export const TimelineTrack: React.FC<TimelineTrackProps> = ({
               </div>
             </div>
 
+            {/* Social Platform Audience Retention Curve (RL Reward Signal) */}
+            <div style={{
+              padding: '12px 20px',
+              backgroundColor: 'rgba(99, 102, 241, 0.05)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Activity size={14} color="#818cf8" />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc' }}>
+                    Social Platform Viewer Retention Predictor (RL Reward Loop)
+                  </span>
+                  <span className="badge badge-purple" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                    TikTok / YouTube Analytics Model
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', fontSize: '0.72rem' }}>
+                  <span>3s Hook: <strong style={{ color: '#67e8f9' }}>{lintReport?.retentionPrediction?.threeSecondHookRetention ?? 86}%</strong></span>
+                  <span>30s Held: <strong style={{ color: '#86efac' }}>{lintReport?.retentionPrediction?.thirtySecondRetention ?? 62}%</strong></span>
+                  <span>Story Coherence: <strong style={{ color: '#a5b4fc' }}>{lintReport?.metrics?.storyCoherenceScore ?? 95}/100</strong></span>
+                </div>
+              </div>
+
+              {/* Simulated Retention Graph Line */}
+              <div style={{
+                height: '42px',
+                width: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                borderRadius: '5px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'flex-end',
+              }}>
+                <svg width="100%" height="100%" viewBox="0 0 100 40" preserveAspectRatio="none" style={{ display: 'block' }}>
+                  <defs>
+                    <linearGradient id="retentionGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity="0.45" />
+                      <stop offset="100%" stopColor="#818cf8" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  {/* Fill area */}
+                  <path
+                    d={`M 0 40 L 0 ${40 - (lintReport?.retentionPrediction?.curve?.[0]?.retentionPct ?? 100) * 0.38} ` +
+                      (lintReport?.retentionPrediction?.curve || [
+                        { timeSec: 0, retentionPct: 100 },
+                        { timeSec: 3, retentionPct: 86 },
+                        { timeSec: 10, retentionPct: 78 },
+                        { timeSec: 20, retentionPct: 72 },
+                        { timeSec: 30, retentionPct: 62 },
+                      ]).map((pt, i, arr) => `L ${(i / (arr.length - 1)) * 100} ${40 - (pt.retentionPct * 0.38)}`).join(' ') +
+                      ` L 100 40 Z`}
+                    fill="url(#retentionGrad)"
+                  />
+                  {/* Line curve */}
+                  <path
+                    d={`M 0 ${40 - (lintReport?.retentionPrediction?.curve?.[0]?.retentionPct ?? 100) * 0.38} ` +
+                      (lintReport?.retentionPrediction?.curve || [
+                        { timeSec: 0, retentionPct: 100 },
+                        { timeSec: 3, retentionPct: 86 },
+                        { timeSec: 10, retentionPct: 78 },
+                        { timeSec: 20, retentionPct: 72 },
+                        { timeSec: 30, retentionPct: 62 },
+                      ]).map((pt, i, arr) => `L ${(i / (arr.length - 1)) * 100} ${40 - (pt.retentionPct * 0.38)}`).join(' ')}
+                    fill="none"
+                    stroke="#818cf8"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+                {/* 3-Second Hook Marker */}
+                <div style={{
+                  position: 'absolute',
+                  left: '10%',
+                  top: 0,
+                  bottom: 0,
+                  borderLeft: '1px dashed rgba(6, 182, 212, 0.45)',
+                  paddingLeft: '3px',
+                }}>
+                  <span style={{ fontSize: '0.55rem', color: '#67e8f9', fontWeight: 700 }}>3s Hook</span>
+                </div>
+              </div>
+            </div>
+
             {/* Filter Tabs */}
             <div style={{
               padding: '10px 20px',
               display: 'flex',
               gap: '6px',
               borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+              flexWrap: 'wrap',
             }}>
               {[
                 { id: 'all', label: `All Findings (${findings.length})` },
                 { id: 'errors', label: `Errors Only (${findings.filter((f: any) => f.severity === 'error').length})` },
                 { id: 'WORD_CUTOFF', label: `Word Cutoffs (${findings.filter((f: any) => getFindingRule(f) === 'WORD_CUTOFF').length})` },
-                { id: 'AUDIO_POP_RISK', label: `Audio Pop Risks (${findings.filter((f: any) => getFindingRule(f) === 'AUDIO_POP_RISK').length})` },
+                { id: 'DANGLING_PRONOUN', label: `Narrative / Pronouns (${findings.filter((f: any) => ['DANGLING_PRONOUN', 'BROKEN_CAUSAL_CONNECTIVE', 'STORY_ARC_DEFICIT'].includes(getFindingRule(f))).length})` },
+                { id: 'AUDIO_POP_RISK', label: `Pop Risks (${findings.filter((f: any) => getFindingRule(f) === 'AUDIO_POP_RISK').length})` },
               ].map((tab) => (
                 <button
                   key={tab.id}

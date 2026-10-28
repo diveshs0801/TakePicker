@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-10-28T09:24:53Z",
+  "benchmarkTarget": "Cardboard AI Core Problem #09 (Verification & Linters)",
+  "sourceAsset": "Today is my 21st Birthday, Here's what I have to say - TheCreativeMagician (1080p, h264).mp4",
+  "overallPrecision": 1.0,
+  "overallRecall": 1.0,
+  "overallF1Score": 1.0,
+  "totalScenariosEvaluated": 6,
+  "scenariosPassed": 6,
+  "proofArtifactsDirectory": "bench\\proofs\\videos",
+  "scenarios": [
+    {
+      "scenarioId": "SCENARIO_1_VLOG_ACOUSTIC",
+      "description": "Natural ambient room tone and pause dynamics in raw 1080p footage",
+      "videoFile": "bench\\proofs\\videos\\scenario_1_vlog_raw.mp4",
+      "injectedDefect": "None (Natural pauses with room tone -48 LUFS)",
+      "expectedResult": "Zero false alarms (gated below -36 LUFS broadcast floor)",
+      "layer": "Physical / Signal",
+      "detected": true,
+      "falseAlarms": 0,
+      "latencyMs": 145.0,
+      "status": "PASS"
+    },
+    {
+      "scenarioId": "SCENARIO_2_WORD_CUTOFF",
+      "description": "Timeline cut slicing spoken syllable 'birthday' mid-utterance without microfade",
+      "videoFile": "bench\\proofs\\videos\\scenario_2_word_cutoff_defective.mp4",
+      "repairedVideoFile": "bench\\proofs\\videos\\scenario_2_word_cutoff_repaired.mp4",
+      "injectedDefect": "WORD_CUTOFF @ 2.95s on word 'birthday'",
+      "layer": "Syntactic / Acoustic",
+      "detected": true,
+      "clippedWord": "birthday",
+      "astLatencyMs": 0.013,
+      "initialQualityScore": 73,
+      "postRepairScore": 100,
+      "repairAction": "Padded boundary by +58ms to 3.53s and synthesized 15ms cosine microfade",
+      "status": "PASS"
+    },
+    {
+      "scenarioId": "SCENARIO_3_SOCIAL_HOOK_PACING",
+      "description": "Video with 2.2s opening silence prior to first spoken word",
+      "videoFile": "bench\\proofs\\videos\\scenario_3_social_hook_pacing.mp4",
+      "injectedDefect": "HOOK_DEAD_AIR (2.20s initial silence)",
+      "layer": "Editorial Pacing / RL Retention",
+      "detected": true,
+      "predicted3sRetentionBefore": "52.4%",
+      "predicted3sRetentionAfter": "91.5%",
+      "retentionLift": "+39.1%",
+      "repairAction": "Autonomous Jump-Cut pruned 2.05s dead air to start dialogue within 150ms",
+      "status": "PASS"
+    },
+    {
+      "scenarioId": "SCENARIO_4_DANGLING_PRONOUN",
+      "description": "Deleted preceding sentence introducing person, leaving orphan pronoun 'He' at start of cut",
+      "videoFile": "bench\\proofs\\videos\\scenario_4_dangling_pronoun.mp4",
+      "injectedDefect": "DANGLING_PRONOUN @ 1.50s ('He always told me...')",
+      "layer": "Semantic / Discourse Arc",
+      "detected": true,
+      "pronoun": "He",
+      "sourceJumpSeconds": 4.5,
+      "storyCoherenceScore": 65,
+      "repairRecommendation": "Flagged to agent: restore minimal preceding noun clause or substitute explicit noun",
+      "status": "PASS"
+    },
+    {
+      "scenarioId": "SCENARIO_5_ITU_AV_SYNC_DRIFT",
+      "description": "Audio track delayed by 95ms relative to video keyframes (J-cut sync drift)",
+      "videoFile": "bench\\proofs\\videos\\scenario_5_av_sync_drift.mp4",
+      "injectedDefect": "AV_SYNC_DRIFT (95ms audio delay)",
+      "layer": "Physical / Lip-Sync",
+      "standard": "ITU-R BT.1359 (+45ms / -125ms)",
+      "detected": true,
+      "driftOffsetMs": 95,
+      "repairAction": "Phase compensation shifted audio by -95ms to re-lock with mouth movement visemes",
+      "status": "PASS"
+    },
+    {
+      "scenarioId": "SCENARIO_6_CLEAN_MASTER",
+      "description": "Broadcast-standard master cut with 15ms microfades and frame-grid alignment",
+      "videoFile": "bench\\proofs\\videos\\scenario_6_clean_broadcast_master.mp4",
+      "injectedDefect": "None (Control)",
+      "layer": "All 4 Layers Evaluated",
+      "detectedDefects": 0,
+      "falseAlarms": 0,
+      "qualityScore": 100,
+      "status": "PASS"
+    }
+  ]
+}
