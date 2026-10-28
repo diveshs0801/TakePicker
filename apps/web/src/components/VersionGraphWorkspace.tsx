@@ -15,9 +15,12 @@ import {
   Layers,
   Sparkles,
   Play,
-  RotateCcw
+  RotateCcw,
+  SlidersHorizontal,
+  ChevronRight,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
-import type { TimelineBranch, TimelineRevision } from '../../../../packages/contracts';
 
 interface VersionGraphWorkspaceProps {
   currentBranch: string;
@@ -27,13 +30,14 @@ interface VersionGraphWorkspaceProps {
 }
 
 export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
-  currentBranch,
+  currentBranch = 'main',
   onBranchChange,
   onOpenMergeModal,
   onBackToStudio,
 }) => {
-  const [selectedRevision, setSelectedRevision] = useState<string>('rev_426b');
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string>('rev_426b');
 
+  // Branch swimlanes definition
   const branches = [
     {
       id: 'b_main',
@@ -41,6 +45,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       title: 'Master Broadcast Cut (Delivery)',
       author: 'Lead Director',
       color: '#10b981',
+      lane: 0,
       commitsCount: 14,
       lastUpdated: '10m ago',
       isCurrent: currentBranch === 'main',
@@ -51,7 +56,8 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       name: 'sarah/pacing',
       title: 'Sarah Pacing & Dialogue Cut',
       author: 'Sarah (Lead Editor)',
-      color: '#3b82f6',
+      color: '#6366f1',
+      lane: 1,
       commitsCount: 8,
       lastUpdated: '35m ago',
       isCurrent: currentBranch === 'sarah/pacing',
@@ -63,6 +69,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       title: 'Alex Audio Stem & B-Roll Overlays',
       author: 'Alex (Sound Designer)',
       color: '#a855f7',
+      lane: 2,
       commitsCount: 6,
       lastUpdated: '18m ago',
       isCurrent: currentBranch === 'alex/sound-design',
@@ -74,6 +81,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       title: 'AI Copilot Cleaned & Microfaded',
       author: 'TakePicker AI Agent',
       color: '#f59e0b',
+      lane: 3,
       commitsCount: 12,
       lastUpdated: '1h ago',
       isCurrent: currentBranch === 'agent/auto-tighten',
@@ -81,10 +89,16 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
     },
   ];
 
+  // DAG Revisions mapped to branch lanes for true SVG graph rendering
+  // Row height is exactly 78px
+  const ROW_HEIGHT = 78;
+  const LANE_X = [22, 56, 90, 124]; // X coordinates for Lane 0, 1, 2, 3
+
   const revisionsGraph = [
     {
       id: 'rev_9a41',
       branch: 'main',
+      lane: 0,
       hash: 'sha256:9a41...c8',
       author: 'Lead Director',
       authorBadge: 'Director',
@@ -92,10 +106,15 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       time: '10m ago',
       stats: { added: 181, deleted: 0, modified: 0 },
       isMergeCommit: false,
+      parentIds: [],
+      opsSummary: [
+        { type: 'INSERT_CLIP', track: 'V1', count: 181, desc: 'Initial ingest sequence assembled' },
+      ],
     },
     {
       id: 'rev_426b',
       branch: 'alex/sound-design',
+      lane: 2,
       hash: 'sha256:426b...f1',
       author: 'Alex (Sound)',
       authorBadge: 'Audio Engineer',
@@ -103,10 +122,17 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       time: '18m ago',
       stats: { added: 4, deleted: 0, modified: 3 },
       isMergeCommit: false,
+      parentIds: ['rev_9a41'],
+      forkFromLane: 0,
+      opsSummary: [
+        { type: 'ADJUST_VOLUME', track: 'A1', count: 3, desc: 'EBU R128 integrated loudness normalization' },
+        { type: 'INSERT_CLIP', track: 'A2', count: 4, desc: 'Ambient atmospheric riser sound effects' },
+      ],
     },
     {
       id: 'rev_26ab',
       branch: 'sarah/pacing',
+      lane: 1,
       hash: 'sha256:26ab...e3',
       author: 'Sarah (Lead)',
       authorBadge: 'Narrative Editor',
@@ -114,75 +140,85 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       time: '35m ago',
       stats: { added: 0, deleted: 4, modified: 12 },
       isMergeCommit: false,
+      parentIds: ['rev_9a41'],
+      forkFromLane: 0,
+      opsSummary: [
+        { type: 'TRIM_CLIP', track: 'V1', count: 12, desc: 'Sub-frame precision tight trim on Scene 2' },
+        { type: 'DELETE_INTERVAL', track: 'V1', count: 4, desc: 'Pruned dead air pauses (> 0.6s)' },
+      ],
     },
     {
       id: 'rev_11e0',
       branch: 'agent/auto-tighten',
+      lane: 3,
       hash: 'sha256:11e0...02',
-      author: 'TakePicker AI Copilot',
+      author: 'TakePicker AI Agent',
       authorBadge: 'Autonomous Agent',
       message: 'Auto-prune 4 dead air intervals + inject 15ms raised-cosine microfades',
       time: '1h ago',
       stats: { added: 0, deleted: 8, modified: 18 },
       isMergeCommit: true,
+      mergeTargetLane: 0,
+      parentIds: ['rev_9a41', 'rev_26ab'],
+      opsSummary: [
+        { type: 'DELETE_INTERVAL', track: 'V1', count: 8, desc: 'Pruned speech pauses & filler stutter' },
+        { type: 'APPLY_MICROFADE', track: 'A1', count: 18, desc: '15ms raised-cosine boundary crossfades' },
+      ],
     },
   ];
 
+  const selectedRev = revisionsGraph.find((r) => r.id === selectedRevisionId) || revisionsGraph[0];
+
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: 'calc(100vh - 52px)',
-      backgroundColor: '#05070e',
-      color: 'var(--text-main)',
-      overflow: 'hidden',
-    }}>
-      {/* Workspace Subheader */}
-      <div style={{
+    <div
+      style={{
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '14px 24px',
-        borderBottom: '1px solid var(--border-color)',
-        backgroundColor: '#080b15',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(168, 85, 247, 0.4)',
-          }}>
-            <GitBranch size={20} color="#ffffff" />
+        flexDirection: 'column',
+        height: 'calc(100vh - 50px)',
+        backgroundColor: '#070912',
+        color: '#f1f5f9',
+        overflow: 'hidden',
+        userSelect: 'none',
+      }}
+    >
+      {/* Workspace Subheader */}
+      <div
+        style={{
+          height: '46px',
+          padding: '0 18px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+          backgroundColor: '#090c16',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <GitBranch size={16} color="#c084fc" />
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#ffffff' }}>
+              Version Control & Revision Graph
+            </span>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-                Timeline Version Control & Branches
-              </h2>
-              <span style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: 'rgba(168, 85, 247, 0.2)',
-                color: '#d8b4fe',
-                border: '1px solid rgba(168, 85, 247, 0.4)',
-              }}>
-                Cardboard AI Problem #10: Git for Video
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              Non-destructive collaborative branching, visual DAG revision history & 3-way merge
-            </p>
-          </div>
+
+          <span
+            style={{
+              fontSize: '0.66rem',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '999px',
+              backgroundColor: 'rgba(168, 85, 247, 0.15)',
+              color: '#d8b4fe',
+              border: '1px solid rgba(168, 85, 247, 0.35)',
+            }}
+          >
+            ACTIVE: 🌿 {currentBranch}
+          </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Action Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             onClick={onOpenMergeModal}
@@ -190,19 +226,19 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 16px',
+              padding: '5px 13px',
               borderRadius: '6px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '0.8rem',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.45)',
+              color: '#f3e8ff',
+              fontSize: '0.76rem',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+              transition: 'all 0.15s ease',
             }}
           >
-            <GitMerge size={15} />
-            <span>Review & 3-Way Merge</span>
+            <GitMerge size={14} color="#c084fc" />
+            <span>3-Way Timeline Merge</span>
           </button>
 
           <button
@@ -212,44 +248,50 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 16px',
+              padding: '5px 12px',
               borderRadius: '6px',
               background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-main)',
-              fontSize: '0.8rem',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#cbd5e1',
+              fontSize: '0.76rem',
               fontWeight: 600,
               cursor: 'pointer',
+              transition: 'all 0.15s ease',
             }}
           >
-            <RotateCcw size={14} />
+            <SlidersHorizontal size={13} />
             <span>Return to Studio NLE</span>
           </button>
         </div>
       </div>
 
-      {/* Main Graph Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '360px 1fr 340px',
-        flex: 1,
-        overflow: 'hidden',
-      }}>
-        {/* Col 1: Active Branches & Variations List */}
-        <div style={{
-          borderRight: '1px solid var(--border-color)',
-          backgroundColor: '#070912',
-          padding: '16px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-        }}>
+      {/* 3-Column Studio Layout */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '270px 1fr 380px',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        {/* COLUMN 1: Branches & Cuts Panel (Left) */}
+        <div
+          style={{
+            borderRight: '1px solid rgba(255, 255, 255, 0.07)',
+            backgroundColor: '#070912',
+            padding: '14px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
               Project Cuts & Branches
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#a5b4fc', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.64rem', color: '#a5b4fc', fontWeight: 700 }}>
               {branches.length} Active
             </span>
           </div>
@@ -260,67 +302,73 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                 key={b.id}
                 onClick={() => onBranchChange(b.name)}
                 style={{
-                  padding: '12px',
-                  borderRadius: '10px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
                   backgroundColor: b.isCurrent ? 'rgba(168, 85, 247, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-                  border: b.isCurrent ? '1px solid rgba(168, 85, 247, 0.45)' : '1px solid var(--border-color)',
+                  border: b.isCurrent ? '1px solid rgba(168, 85, 247, 0.45)' : '1px solid rgba(255, 255, 255, 0.06)',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '6px',
+                  gap: '5px',
                   transition: 'all 0.15s ease',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: b.color,
-                      boxShadow: `0 0 8px ${b.color}`,
-                    }} />
-                    <span style={{ fontSize: '0.86rem', fontWeight: 700, color: b.isCurrent ? '#ffffff' : '#cbd5e1' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: b.color,
+                        boxShadow: `0 0 6px ${b.color}`,
+                      }}
+                    />
+                    <span style={{ fontSize: '0.80rem', fontWeight: 700, color: b.isCurrent ? '#ffffff' : '#cbd5e1' }}>
                       🌿 {b.name}
                     </span>
                   </div>
 
                   {b.isCurrent ? (
-                    <span style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      padding: '2px 7px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                      color: '#34d399',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
-                    }}>
+                    <span
+                      style={{
+                        fontSize: '0.58rem',
+                        fontWeight: 800,
+                        padding: '1px 6px',
+                        borderRadius: '3px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        color: '#34d399',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                      }}
+                    >
                       CHECKED OUT
                     </span>
                   ) : (
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                    <span style={{ fontSize: '0.64rem', color: '#64748b' }}>
                       {b.lastUpdated}
                     </span>
                   )}
                 </div>
 
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#e2e8f0' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#e2e8f0' }}>
                   {b.title}
                 </div>
 
-                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                <p style={{ margin: 0, fontSize: '0.68rem', color: '#94a3b8', lineHeight: 1.35 }}>
                   {b.description}
                 </p>
 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: '6px',
-                  borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                  fontSize: '0.68rem',
-                  color: 'var(--text-dim)',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: '5px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+                    fontSize: '0.64rem',
+                    color: '#64748b',
+                  }}
+                >
                   <span>Author: <strong style={{ color: '#cbd5e1' }}>{b.author}</strong></span>
                   <span>{b.commitsCount} revisions</span>
                 </div>
@@ -329,205 +377,476 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
           </div>
         </div>
 
-        {/* Col 2: Interactive Revision DAG Visual Graph */}
-        <div style={{
-          backgroundColor: '#090c16',
-          padding: '20px 24px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}>
+        {/* COLUMN 2: Interactive Revision DAG Visual Graph (True SVG DAG + Perfectly Aligned Rows) */}
+        <div
+          style={{
+            backgroundColor: '#080a14',
+            padding: '18px 20px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+          }}
+        >
+          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#ffffff' }}>
+              <h3 style={{ margin: 0, fontSize: '0.90rem', fontWeight: 800, color: '#ffffff' }}>
                 Timeline Revision History DAG
               </h3>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <p style={{ margin: 0, fontSize: '0.70rem', color: '#94a3b8', marginTop: '2px' }}>
                 Immutable Content-Addressable Storage (CAS) snapshots with delta patches
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-              <span>Legend:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.68rem', color: '#64748b' }}>
+              <span>Swimlanes:</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Master
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} /> Master
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6' }} /> Sarah
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#6366f1' }} /> Sarah
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#a855f7' }} /> Alex
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#a855f7' }} /> Alex
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#f59e0b' }} /> AI Copilot
               </span>
             </div>
           </div>
 
-          {/* Visual Graph Nodes */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '6px' }}>
-            {revisionsGraph.map((rev, idx) => (
-              <div
-                key={rev.id}
-                onClick={() => setSelectedRevision(rev.id)}
-                style={{
-                  padding: '14px 18px',
-                  borderRadius: '10px',
-                  backgroundColor: selectedRevision === rev.id ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-                  border: selectedRevision === rev.id ? '1px solid #6366f1' : '1px solid var(--border-color)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '14px',
-                  transition: 'all 0.15s ease',
-                  position: 'relative',
-                }}
-              >
-                {/* Visual Branch Line Connector */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: rev.branch === 'main' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(168, 85, 247, 0.2)',
-                    border: `2px solid ${rev.branch === 'main' ? '#10b981' : '#a855f7'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <GitCommit size={14} color={rev.branch === 'main' ? '#34d399' : '#c084fc'} />
-                  </div>
-                  {idx < revisionsGraph.length - 1 && (
-                    <div style={{ width: '2px', height: '24px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
-                  )}
-                </div>
+          {/* Table Header */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '150px 100px 1fr 180px 100px',
+              padding: '6px 12px',
+              fontSize: '0.66rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              color: '#64748b',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            <span>DAG Branch Graph</span>
+            <span>Revision</span>
+            <span>Commit Message & Author</span>
+            <span>Diff Summary</span>
+            <span style={{ textAlign: 'right' }}>Actions</span>
+          </div>
 
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff' }}>
-                        {rev.message}
+          {/* DAG Container with Synchronized SVG Canvas */}
+          <div style={{ position: 'relative', width: '100%' }}>
+            {/* SVG Tracks Canvas Layer (width: 150px, height: revisions * ROW_HEIGHT) */}
+            <svg
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '150px',
+                height: `${revisionsGraph.length * ROW_HEIGHT}px`,
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            >
+              {/* Continuous vertical branch track lines */}
+              {LANE_X.map((x, laneIdx) => (
+                <line
+                  key={`track-${laneIdx}`}
+                  x1={x}
+                  y1={20}
+                  x2={x}
+                  y2={revisionsGraph.length * ROW_HEIGHT - 20}
+                  stroke={laneIdx === 0 ? 'rgba(16, 185, 129, 0.35)' : 'rgba(255, 255, 255, 0.12)'}
+                  strokeWidth={laneIdx === 0 ? 2 : 1.5}
+                  strokeDasharray={laneIdx === 0 ? 'none' : '3 3'}
+                />
+              ))}
+
+              {/* Branch connecting bezier curves (Forks and Merges) */}
+              {/* Fork 1: Main (rev_9a41) -> Alex (rev_426b) */}
+              <path
+                d={`M ${LANE_X[0]} ${0 * ROW_HEIGHT + 39} C ${LANE_X[0]} ${0 * ROW_HEIGHT + 60}, ${LANE_X[2]} ${1 * ROW_HEIGHT + 18}, ${LANE_X[2]} ${1 * ROW_HEIGHT + 39}`}
+                fill="none"
+                stroke="#a855f7"
+                strokeWidth={2}
+                strokeDasharray="4 2"
+              />
+
+              {/* Fork 2: Main (rev_9a41) -> Sarah (rev_26ab) */}
+              <path
+                d={`M ${LANE_X[0]} ${0 * ROW_HEIGHT + 39} C ${LANE_X[0]} ${1 * ROW_HEIGHT + 20}, ${LANE_X[1]} ${1 * ROW_HEIGHT + 60}, ${LANE_X[1]} ${2 * ROW_HEIGHT + 39}`}
+                fill="none"
+                stroke="#6366f1"
+                strokeWidth={2}
+              />
+
+              {/* Merge: Sarah & Agent converging to Main */}
+              <path
+                d={`M ${LANE_X[3]} ${3 * ROW_HEIGHT + 39} C ${LANE_X[3]} ${3 * ROW_HEIGHT + 20}, ${LANE_X[0]} ${3 * ROW_HEIGHT + 20}, ${LANE_X[0]} ${3 * ROW_HEIGHT + 39}`}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth={2}
+              />
+
+              {/* Commit Nodes along the SVG tracks */}
+              {revisionsGraph.map((rev, idx) => {
+                const cx = LANE_X[rev.lane];
+                const cy = idx * ROW_HEIGHT + 39;
+                const isSelected = selectedRevisionId === rev.id;
+                const color =
+                  rev.branch === 'main'
+                    ? '#10b981'
+                    : rev.branch === 'sarah/pacing'
+                    ? '#6366f1'
+                    : rev.branch === 'alex/sound-design'
+                    ? '#a855f7'
+                    : '#f59e0b';
+
+                return (
+                  <g key={`node-${rev.id}`}>
+                    {/* Pulsing ring on selected node */}
+                    {isSelected && (
+                      <circle cx={cx} cy={cy} r={12} fill="none" stroke={color} strokeWidth={2} opacity={0.6}>
+                        <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                    )}
+
+                    {/* Commit Circle */}
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={7}
+                      fill={color}
+                      stroke="#080a14"
+                      strokeWidth={2}
+                    />
+
+                    {/* Special center dot for merge commit */}
+                    {rev.isMergeCommit && (
+                      <circle cx={cx} cy={cy} r={2.5} fill="#ffffff" />
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Synchronized Row List Aligned with SVG Nodes */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, zIndex: 2, position: 'relative' }}>
+              {revisionsGraph.map((rev, idx) => {
+                const isSelected = selectedRevisionId === rev.id;
+                const branchColor =
+                  rev.branch === 'main'
+                    ? '#10b981'
+                    : rev.branch === 'sarah/pacing'
+                    ? '#6366f1'
+                    : rev.branch === 'alex/sound-design'
+                    ? '#a855f7'
+                    : '#f59e0b';
+
+                return (
+                  <div
+                    key={rev.id}
+                    onClick={() => setSelectedRevisionId(rev.id)}
+                    style={{
+                      height: `${ROW_HEIGHT}px`,
+                      display: 'grid',
+                      gridTemplateColumns: '150px 100px 1fr 180px 100px',
+                      alignItems: 'center',
+                      padding: '0 12px',
+                      borderRadius: '8px',
+                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.12)' : idx % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent',
+                      border: isSelected ? '1px solid rgba(99, 102, 241, 0.45)' : '1px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s ease',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {/* Col 1: Empty space reserved for SVG Tracks */}
+                    <div style={{ height: '100%' }} />
+
+                    {/* Col 2: Hash pill & Branch */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.62rem',
+                          fontFamily: 'monospace',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                          color: '#a5b4fc',
+                          width: 'fit-content',
+                        }}
+                      >
+                        {rev.id}
                       </span>
-                      {rev.isMergeCommit && (
-                        <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399' }}>
-                          3-WAY MERGE
+                      <span
+                        style={{
+                          fontSize: '0.64rem',
+                          fontWeight: 700,
+                          color: branchColor,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {rev.branch}
+                      </span>
+                    </div>
+
+                    {/* Col 3: Message & Author */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingRight: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ffffff' }}>
+                          {rev.message}
+                        </span>
+                        {rev.isMergeCommit && (
+                          <span
+                            style={{
+                              fontSize: '0.58rem',
+                              fontWeight: 800,
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                              background: 'rgba(16, 185, 129, 0.2)',
+                              color: '#34d399',
+                              border: '1px solid rgba(16, 185, 129, 0.4)',
+                            }}
+                          >
+                            3-WAY MERGE
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.66rem', color: '#64748b' }}>
+                        <span>Author: <strong style={{ color: '#cbd5e1' }}>{rev.author}</strong></span>
+                        <span>•</span>
+                        <span>{rev.time}</span>
+                      </div>
+                    </div>
+
+                    {/* Col 4: Diff Summary Badges */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                      {rev.stats.added > 0 && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#34d399', background: 'rgba(16, 185, 129, 0.12)', padding: '1px 5px', borderRadius: '3px' }}>
+                          +{rev.stats.added} clips
+                        </span>
+                      )}
+                      {rev.stats.deleted > 0 && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#f87171', background: 'rgba(239, 68, 68, 0.12)', padding: '1px 5px', borderRadius: '3px' }}>
+                          -{rev.stats.deleted} silences
+                        </span>
+                      )}
+                      {rev.stats.modified > 0 && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#818cf8', background: 'rgba(99, 102, 241, 0.12)', padding: '1px 5px', borderRadius: '3px' }}>
+                          {rev.stats.modified} trims
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                      {rev.time}
-                    </span>
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    <span>Author: <strong style={{ color: '#e2e8f0' }}>{rev.author}</strong></span>
-                    <span>•</span>
-                    <span>Branch: <code style={{ color: '#a5b4fc' }}>{rev.branch}</code></span>
-                    <span>•</span>
-                    <span style={{ fontFamily: 'monospace', color: 'var(--text-dim)' }}>{rev.hash}</span>
+                    {/* Col 5: Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onBranchChange(rev.branch);
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          color: '#e2e8f0',
+                          fontSize: '0.66rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Checkout
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Diff Stats Badges */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    {rev.stats.added > 0 && (
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#34d399', background: 'rgba(16, 185, 129, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                        +{rev.stats.added} clips
-                      </span>
-                    )}
-                    {rev.stats.deleted > 0 && (
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                        -{rev.stats.deleted} silences
-                      </span>
-                    )}
-                    {rev.stats.modified > 0 && (
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#818cf8', background: 'rgba(99, 102, 241, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
-                        {rev.stats.modified} trims & levels
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Col 3: Selected Revision Inspector */}
-        <div style={{
-          borderLeft: '1px solid var(--border-color)',
-          backgroundColor: '#070912',
-          padding: '18px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-            <FileCode size={16} color="#818cf8" />
-            <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: '#ffffff' }}>
-              Revision Inspector
+        {/* COLUMN 3: 3-Way Diff & CAS Patch Inspector (Right) */}
+        <div
+          style={{
+            borderLeft: '1px solid rgba(255, 255, 255, 0.07)',
+            backgroundColor: '#070912',
+            padding: '14px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}
+        >
+          {/* Header */}
+          <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.07)', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
+                Revision Inspector
+              </span>
+              <span style={{ fontSize: '0.66rem', fontFamily: 'monospace', color: '#a5b4fc' }}>
+                {selectedRev.hash}
+              </span>
+            </div>
+            <h4 style={{ margin: '6px 0 0 0', fontSize: '0.84rem', fontWeight: 800, color: '#ffffff' }}>
+              {selectedRev.message}
             </h4>
           </div>
 
-          <div style={{
-            padding: '12px',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid var(--border-color)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            fontSize: '0.75rem',
-          }}>
-            <div>
-              <span style={{ color: 'var(--text-dim)' }}>Revision ID:</span>{' '}
-              <code style={{ color: '#818cf8' }}>{selectedRevision}</code>
+          {/* Metadata Card */}
+          <div
+            style={{
+              padding: '10px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              fontSize: '0.72rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Branch:</span>
+              <span style={{ fontWeight: 700, color: '#c084fc' }}>🌿 {selectedRev.branch}</span>
             </div>
-            <div>
-              <span style={{ color: 'var(--text-dim)' }}>Branch:</span>{' '}
-              <strong style={{ color: '#ffffff' }}>alex/sound-design</strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Author:</span>
+              <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{selectedRev.author}</span>
             </div>
-            <div>
-              <span style={{ color: 'var(--text-dim)' }}>Author:</span>{' '}
-              <span>Alex (Sound Designer)</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Committed:</span>
+              <span style={{ color: '#94a3b8' }}>{selectedRev.time}</span>
             </div>
-            <div>
-              <span style={{ color: 'var(--text-dim)' }}>Verification Score:</span>{' '}
-              <span style={{ color: '#34d399', fontWeight: 700 }}>100 / 100 (Clean)</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Parents:</span>
+              <span style={{ fontFamily: 'monospace', color: '#a5b4fc', fontSize: '0.66rem' }}>
+                {selectedRev.parentIds.length > 0 ? selectedRev.parentIds.join(', ') : 'root (initial ingest)'}
+              </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-dim)' }}>
-              Operations in this Revision
+          {/* 4-Layer Invariant Verification Verification */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
+              Invariant Checks
             </span>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4, padding: '8px', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.05)' }}>
-              • TRIM: Clip 104 in: 0.00s ➔ out: 8.80s (+1.3s audio tail)<br />
-              • FIELD_EDIT: Clip 102 gain: 1.00 ➔ 1.35 (+3.2dB dialogue boost)<br />
-              • INSERT: B-roll cutaway "silicon_arch_reel.mp4" on Track V2<br />
-              • MICROFADE: 15ms raised-cosine fade applied to boundary
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 9px',
+                borderRadius: '5px',
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                fontSize: '0.69rem',
+              }}
+            >
+              <span style={{ color: '#a7f3d0', fontWeight: 600 }}>Snapping Grid: 24.000 fps (0 sub-frame leaks)</span>
+              <CheckCircle2 size={12} color="#10b981" />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 9px',
+                borderRadius: '5px',
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                fontSize: '0.69rem',
+              }}
+            >
+              <span style={{ color: '#a7f3d0', fontWeight: 600 }}>Microfades: 15ms Raised-Cosine Active</span>
+              <CheckCircle2 size={12} color="#10b981" />
             </div>
           </div>
 
+          {/* Timeline Delta Operations */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
+              Timeline Patch Operations ({selectedRev.opsSummary.length})
+            </span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {selectedRev.opsSummary.map((op, opIdx) => (
+                <div
+                  key={`op-${opIdx}`}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '3px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span
+                      style={{
+                        fontSize: '0.62rem',
+                        fontWeight: 800,
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        background:
+                          op.type.startsWith('INSERT')
+                            ? 'rgba(16, 185, 129, 0.2)'
+                            : op.type.startsWith('DELETE')
+                            ? 'rgba(239, 68, 68, 0.2)'
+                            : 'rgba(99, 102, 241, 0.2)',
+                        color:
+                          op.type.startsWith('INSERT')
+                            ? '#34d399'
+                            : op.type.startsWith('DELETE')
+                            ? '#f87171'
+                            : '#a5b4fc',
+                      }}
+                    >
+                      {op.type} [{op.track}]
+                    </span>
+                    <span style={{ fontSize: '0.64rem', color: '#64748b' }}>{op.count} ops</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.68rem', color: '#cbd5e1', lineHeight: 1.3 }}>
+                    {op.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Action CTA */}
           <button
             type="button"
-            onClick={onOpenMergeModal}
+            onClick={() => onBranchChange(selectedRev.branch)}
             style={{
-              marginTop: 'auto',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              border: 'none',
+              color: '#ffffff',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
-              padding: '10px',
-              borderRadius: '6px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
+              gap: '6px',
+              boxShadow: '0 2px 10px rgba(99, 102, 241, 0.4)',
+              marginTop: 'auto',
             }}
           >
-            <GitMerge size={14} />
-            <span>3-Way Merge this Cut into Main</span>
+            <span>Switch Timeline to 🌿 {selectedRev.branch}</span>
+            <ArrowRight size={13} />
           </button>
         </div>
       </div>

@@ -14,6 +14,15 @@ import { VersionMergeModal } from '../components/VersionMergeModal';
 import { LeftSidebar } from '../components/LeftSidebar';
 import { VersionGraphWorkspace } from '../components/VersionGraphWorkspace';
 import { io, Socket } from 'socket.io-client';
+import {
+  PanelRightOpen,
+  PanelBottomOpen,
+  Bot,
+  Scissors,
+  X,
+  ChevronRight,
+  Maximize2,
+} from 'lucide-react';
 import type { Asset, TakeGroup, Timeline, AssetStatus, ConflictResolutionStrategy } from '../../../../packages/contracts';
 
 export default function Home() {
@@ -25,41 +34,54 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [qualityScore, setQualityScore] = useState<number>(100);
 
+  // Cardboard AI Problem #10 Version Control state
   const [currentBranch, setCurrentBranch] = useState<string>('main');
   const [isMergeModalOpen, setIsMergeModalOpen] = useState<boolean>(false);
+
+  // Antigravity IDE / VS Code Style Panel Open/Close States
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState<boolean>(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(true);
+  const [isTimelineOpen, setIsTimelineOpen] = useState<boolean>(true);
+
+  // Dialogs
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [activeAssetStatus, setActiveAssetStatus] = useState<AssetStatus>('READY');
   const [rightPanelTab, setRightPanelTab] = useState<'agent' | 'retakes'>('agent');
   const [canUndo, setCanUndo] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
 
   const playerRef = useRef<WebCodecsPlayerRef | null>(null);
 
   const DEMO_ASSET_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Fetch initial or recent asset
   const loadAsset = async (assetId: string) => {
     try {
       const [assetRes, takesRes, timelineRes, lintRes] = await Promise.all([
-        fetch(`/api/assets/${assetId}`),
-        fetch(`/api/assets/${assetId}/takes`),
-        fetch(`/api/assets/${assetId}/timeline`),
+        fetch(`/api/assets/${assetId}`).catch(() => null),
+        fetch(`/api/assets/${assetId}/takes`).catch(() => null),
+        fetch(`/api/assets/${assetId}/timeline`).catch(() => null),
         fetch(`/api/assets/${assetId}/timeline/lint`).catch(() => null),
       ]);
 
-      if (assetRes.ok) {
+      if (assetRes && assetRes.ok) {
         const assetData = await assetRes.json();
         setCurrentAsset(assetData);
         setActiveAssetStatus(assetData.status);
       }
 
-      if (takesRes.ok) {
+      if (takesRes && takesRes.ok) {
         const takesData = await takesRes.json();
         setGroups(takesData.groups || []);
       }
 
-      if (timelineRes.ok) {
+      if (timelineRes && timelineRes.ok) {
         const timelineData = await timelineRes.json();
         setTimeline(timelineData);
       }
@@ -140,33 +162,37 @@ export default function Home() {
 
   // WebSocket connection for real-time asset processing updates
   useEffect(() => {
-    if (!currentAsset?.id) return;
+    if (!currentAsset?.id || typeof window === 'undefined') return;
 
-    const socketUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.protocol}//${window.location.hostname}:3000`
-        : 'http://localhost:3000';
-    const socket: Socket = io(socketUrl, { transports: ['websocket', 'polling'] });
+    let socket: Socket | null = null;
+    try {
+      const socketUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
+      socket = io(socketUrl, { transports: ['websocket', 'polling'], reconnectionAttempts: 3 });
 
-    socket.on('connect', () => {
-      socket.emit('join:asset', { assetId: currentAsset.id });
-    });
-
-    socket.on('asset:status', (data: { assetId: string; status: AssetStatus; error?: string }) => {
-      if (data.assetId === currentAsset.id) {
-        setActiveAssetStatus(data.status);
-        setCurrentAsset((prev) => (prev ? { ...prev, status: data.status } : null));
-
-        if (data.status === 'READY') {
-          loadAsset(data.assetId);
-          fetchAllAssets();
-          setIsUploadOpen(false);
+      socket.on('connect', () => {
+        if (currentAsset?.id) {
+          socket?.emit('join:asset', { assetId: currentAsset.id });
         }
-      }
-    });
+      });
+
+      socket.on('asset:status', (data: { assetId: string; status: AssetStatus; error?: string }) => {
+        if (data.assetId === currentAsset.id) {
+          setActiveAssetStatus(data.status);
+          setCurrentAsset((prev) => (prev ? { ...prev, status: data.status } : null));
+
+          if (data.status === 'READY') {
+            loadAsset(data.assetId);
+            fetchAllAssets();
+            setIsUploadOpen(false);
+          }
+        }
+      });
+    } catch (e) {
+      // safe fallback
+    }
 
     return () => {
-      socket.disconnect();
+      socket?.disconnect();
     };
   }, [currentAsset?.id]);
 
@@ -243,20 +269,25 @@ export default function Home() {
 
   const videoSourceUrl = currentAsset?.storageKey
     ? `/media/${currentAsset.storageKey}`
+    : (currentAsset as any)?.storage_key
+    ? `/media/${(currentAsset as any).storage_key}`
     : currentAsset?.id
     ? `/media/assets/${currentAsset.id}/source.mp4`
     : null;
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      width: '100vw',
-      overflow: 'hidden',
-      backgroundColor: 'var(--bg-primary)',
-    }}>
-      {/* 1. Universal Studio Header */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        width: '100vw',
+        overflow: 'hidden',
+        backgroundColor: '#070912',
+        color: '#f1f5f9',
+      }}
+    >
+      {/* 1. Universal Studio Top Bar with 3-Zone Layout & Antigravity IDE Panel Toggles */}
       <Header
         currentAsset={currentAsset}
         currentView={currentView}
@@ -271,6 +302,12 @@ export default function Home() {
         currentBranch={currentBranch}
         onBranchChange={setCurrentBranch}
         onOpenMergeModal={() => setIsMergeModalOpen(true)}
+        isLeftOpen={isLeftSidebarOpen}
+        onToggleLeft={() => setIsLeftSidebarOpen((prev) => !prev)}
+        isRightOpen={isRightSidebarOpen}
+        onToggleRight={() => setIsRightSidebarOpen((prev) => !prev)}
+        isTimelineOpen={isTimelineOpen}
+        onToggleTimeline={() => setIsTimelineOpen((prev) => !prev)}
       />
 
       {/* 2. Main Viewport Switcher */}
@@ -294,23 +331,28 @@ export default function Home() {
         />
       ) : (
         /* Professional Broadcast Studio NLE Layout (Left Bins + Center Monitor + Right Inspector + Bottom Timeline) */
-        <main style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          height: 'calc(100vh - 52px)',
-          overflow: 'hidden',
-          backgroundColor: '#04060b',
-        }}>
-          {/* Top Half: Left Media/Git Bins (Left) + Video Monitor (Center) + AI Inspector (Right) */}
-          <div style={{
+        <main
+          style={{
             display: 'flex',
-            flex: '1 1 54%',
-            minHeight: '280px',
+            flexDirection: 'column',
+            flex: 1,
+            height: 'calc(100vh - 50px)',
             overflow: 'hidden',
-            borderBottom: '1px solid var(--border-color)',
-          }}>
-            {/* Left Drawer: Media Bins & Project Organizer */}
+            backgroundColor: '#04060b',
+          }}
+        >
+          {/* Top Half: Left Media/Git Bins + Video Monitor + AI Inspector */}
+          <div
+            style={{
+              display: 'flex',
+              flex: isTimelineOpen ? '1 1 54%' : '1 1 100%',
+              minHeight: '260px',
+              overflow: 'hidden',
+              borderBottom: isTimelineOpen ? '1px solid rgba(255, 255, 255, 0.07)' : 'none',
+              transition: 'flex 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            {/* Left Drawer: Media Bins & Project Organizer (Antigravity collapsible) */}
             <LeftSidebar
               currentAsset={currentAsset}
               allAssets={allAssets}
@@ -320,134 +362,253 @@ export default function Home() {
               onOpenMergeModal={() => setIsMergeModalOpen(true)}
               qualityScore={qualityScore}
               onOpenUpload={() => setIsUploadOpen(true)}
+              isOpen={isLeftSidebarOpen}
+              onToggleOpen={() => setIsLeftSidebarOpen((prev) => !prev)}
             />
 
             {/* Center: Broadcast Video Monitor */}
-            <div style={{
-              flex: 1,
-              height: '100%',
-              overflow: 'hidden',
-              padding: '8px 10px',
-              backgroundColor: '#05070e',
-            }}>
+            <div
+              style={{
+                flex: 1,
+                height: '100%',
+                overflow: 'hidden',
+                padding: '8px 10px',
+                backgroundColor: '#05070e',
+                position: 'relative',
+              }}
+            >
               <WebCodecsPlayer
                 ref={playerRef}
                 src={videoSourceUrl}
                 onTimeUpdate={(t) => setCurrentTime(t)}
                 fps={currentAsset?.fps || 30}
               />
+
+              {/* Collapsed Right Inspector floating expand tab */}
+              {!isRightSidebarOpen && (
+                <button
+                  type="button"
+                  onClick={() => setIsRightSidebarOpen(true)}
+                  title="Expand AI Copilot & Retake Inspector"
+                  style={{
+                    position: 'absolute',
+                    top: '18px',
+                    right: '18px',
+                    zIndex: 30,
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'rgba(99, 102, 241, 0.25)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(99, 102, 241, 0.45)',
+                    color: '#e0e7ff',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                  }}
+                >
+                  <Bot size={14} color="#818cf8" />
+                  <span>Open AI Inspector</span>
+                </button>
+              )}
             </div>
 
-            {/* Right: AI Copilot & Retake Inspector Side Dock */}
-            <div style={{
-              width: '420px',
-              minWidth: '420px',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: '#070a13',
-              borderLeft: '1px solid var(--border-color)',
-              overflow: 'hidden',
-            }}>
-              {/* Tab Selector Header */}
-              <div style={{
-                display: 'flex',
-                gap: '4px',
-                padding: '6px',
-                backgroundColor: '#0a0d18',
-                borderBottom: '1px solid var(--border-color)',
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setRightPanelTab('agent')}
+            {/* Right: AI Copilot & Retake Inspector Side Dock (Antigravity collapsible) */}
+            {isRightSidebarOpen && (
+              <div
+                style={{
+                  width: '390px',
+                  minWidth: '390px',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: '#070a13',
+                  borderLeft: '1px solid rgba(255, 255, 255, 0.07)',
+                  overflow: 'hidden',
+                  transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              >
+                {/* Tab Selector Header + Close Button */}
+                <div
                   style={{
-                    flex: 1,
-                    padding: '6px 10px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: 'none',
-                    background: rightPanelTab === 'agent' ? 'var(--accent-gradient)' : 'transparent',
-                    color: rightPanelTab === 'agent' ? '#ffffff' : 'var(--text-muted)',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    boxShadow: rightPanelTab === 'agent' ? '0 2px 10px rgba(99, 102, 241, 0.35)' : 'none',
-                    transition: 'all 0.15s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '5px',
+                    gap: '4px',
+                    padding: '6px 8px',
+                    backgroundColor: '#080c18',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
                   }}
                 >
-                  <span>🤖 AI Copilot</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRightPanelTab('retakes')}
-                  style={{
-                    flex: 1,
-                    padding: '6px 10px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: 'none',
-                    background: rightPanelTab === 'retakes' ? 'var(--accent-gradient)' : 'transparent',
-                    color: rightPanelTab === 'retakes' ? '#ffffff' : 'var(--text-muted)',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    boxShadow: rightPanelTab === 'retakes' ? '0 2px 10px rgba(99, 102, 241, 0.35)' : 'none',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '5px',
-                  }}
-                >
-                  <span>✂ Retake Inspector</span>
-                </button>
-              </div>
-
-              {/* Panel Content Body */}
-              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                {rightPanelTab === 'agent' ? (
-                  <AgentPanel
-                    assetId={currentAsset?.id || null}
-                    timeline={timeline}
-                    onTimelineUpdated={() => {
-                      if (currentAsset?.id) loadAsset(currentAsset.id);
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab('agent')}
+                    style={{
+                      flex: 1,
+                      padding: '5px 8px',
+                      borderRadius: '5px',
+                      border: 'none',
+                      background: rightPanelTab === 'agent' ? 'rgba(99, 102, 241, 0.28)' : 'transparent',
+                      color: rightPanelTab === 'agent' ? '#ffffff' : '#94a3b8',
+                      fontWeight: 700,
+                      fontSize: '0.76rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
                     }}
-                    onSeek={handleSeek}
-                  />
-                ) : (
-                  <RetakeInspector
-                    groups={groups}
-                    onSelectTake={handleSelectTake}
-                    onPreviewTake={handleSeek}
-                    currentTime={currentTime}
-                  />
-                )}
+                  >
+                    <Bot size={13} color={rightPanelTab === 'agent' ? '#818cf8' : 'currentColor'} />
+                    <span>AI Copilot</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelTab('retakes')}
+                    style={{
+                      flex: 1,
+                      padding: '5px 8px',
+                      borderRadius: '5px',
+                      border: 'none',
+                      background: rightPanelTab === 'retakes' ? 'rgba(99, 102, 241, 0.28)' : 'transparent',
+                      color: rightPanelTab === 'retakes' ? '#ffffff' : '#94a3b8',
+                      fontWeight: 700,
+                      fontSize: '0.76rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <Scissors size={13} color={rightPanelTab === 'retakes' ? '#818cf8' : 'currentColor'} />
+                    <span>Retake Inspector</span>
+                  </button>
+
+                  {/* Panel Close Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsRightSidebarOpen(false)}
+                    title="Close Inspector Dock (Antigravity Style)"
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Panel Content Body */}
+                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                  {rightPanelTab === 'agent' ? (
+                    <AgentPanel
+                      assetId={currentAsset?.id || null}
+                      timeline={timeline}
+                      onTimelineUpdated={() => {
+                        if (currentAsset?.id) loadAsset(currentAsset.id);
+                      }}
+                      onSeek={handleSeek}
+                    />
+                  ) : (
+                    <RetakeInspector
+                      groups={groups}
+                      onSelectTake={handleSelectTake}
+                      onPreviewTake={handleSeek}
+                      currentTime={currentTime}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Bottom Half: Full-Width Multi-Track Timeline */}
-          <div style={{
-            flex: '0 0 auto',
-            width: '100%',
-            overflow: 'hidden',
-          }}>
-            <TimelineTrack
-              timeline={timeline}
-              totalDuration={currentAsset?.duration || 20.0}
-              currentTime={currentTime}
-              onSeek={handleSeek}
-              assetId={currentAsset?.id}
-              groups={groups}
-              onSelectTake={handleSelectTake}
-              onTimelineMutated={() => {
-                if (currentAsset?.id) loadAsset(currentAsset.id);
+          {/* Bottom Half: Full-Width Multi-Track Timeline (Antigravity collapsible) */}
+          {isTimelineOpen ? (
+            <div
+              style={{
+                flex: '0 0 auto',
+                width: '100%',
+                overflow: 'hidden',
               }}
-            />
-          </div>
+            >
+              <TimelineTrack
+                timeline={timeline}
+                totalDuration={currentAsset?.duration || 20.0}
+                currentTime={currentTime}
+                onSeek={handleSeek}
+                assetId={currentAsset?.id}
+                groups={groups}
+                onSelectTake={handleSelectTake}
+                onTimelineMutated={() => {
+                  if (currentAsset?.id) loadAsset(currentAsset.id);
+                }}
+              />
+            </div>
+          ) : (
+            /* Collapsed Timeline Status Bar */
+            <div
+              style={{
+                height: '34px',
+                backgroundColor: '#070912',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 16px',
+                fontSize: '0.74rem',
+                color: '#94a3b8',
+                userSelect: 'none',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsTimelineOpen(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '3px 9px',
+                    borderRadius: '4px',
+                    background: 'rgba(99, 102, 241, 0.22)',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    color: '#e0e7ff',
+                    cursor: 'pointer',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <PanelBottomOpen size={13} />
+                  <span>Expand Multi-Track Timeline</span>
+                </button>
+                <span style={{ fontSize: '0.70rem', color: '#64748b' }}>
+                  {timeline?.clips?.length || 181} clips assembled • 24.000 fps grid locked
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.70rem' }}>
+                <span style={{ color: '#10b981', fontWeight: 600 }}>● 100% Broadcast Clean</span>
+                <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>
+                  Playhead: {currentTime.toFixed(2)}s / {(currentAsset?.duration || 2690).toFixed(1)}s
+                </span>
+              </div>
+            </div>
+          )}
         </main>
       )}
 

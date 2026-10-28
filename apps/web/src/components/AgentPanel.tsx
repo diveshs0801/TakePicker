@@ -35,7 +35,7 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
       id: 'welcome',
       sender: 'agent',
       text: 'Hello! I am your AI Video Editor. I can trim clips, select the best retakes, remove pauses and filler words, or make targeted timeline cuts. How can I help with this edit?',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: 'Just now',
     },
   ]);
   const [inputPrompt, setInputPrompt] = useState('');
@@ -718,8 +718,8 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
                   }}>
                     #{op.seq} {op.opType} ({op.actor})
                   </span>
-                  <span style={{ fontSize: '11px', color: '#71717a' }}>
-                    {new Date(op.createdAt).toLocaleTimeString()}
+                  <span suppressHydrationWarning style={{ fontSize: '11px', color: '#71717a' }}>
+                    {op.createdAt ? new Date(op.createdAt).toLocaleTimeString() : ''}
                   </span>
                 </div>
                 <div style={{ fontSize: '11px', color: '#a1a1aa', fontFamily: 'monospace', wordBreak: 'break-all' }}>
