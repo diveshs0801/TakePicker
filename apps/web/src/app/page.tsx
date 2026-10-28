@@ -20,12 +20,14 @@ export default function Home() {
   const [groups, setGroups] = useState<TakeGroup[]>([]);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
+  const [qualityScore, setQualityScore] = useState<number>(100);
 
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [activeAssetStatus, setActiveAssetStatus] = useState<AssetStatus>('READY');
   const [rightPanelTab, setRightPanelTab] = useState<'agent' | 'retakes'>('agent');
+  const [canUndo, setCanUndo] = useState<boolean>(false);
 
   const playerRef = useRef<WebCodecsPlayerRef | null>(null);
 
@@ -34,10 +36,11 @@ export default function Home() {
   // Fetch initial or recent asset
   const loadAsset = async (assetId: string) => {
     try {
-      const [assetRes, takesRes, timelineRes] = await Promise.all([
+      const [assetRes, takesRes, timelineRes, lintRes] = await Promise.all([
         fetch(`/api/assets/${assetId}`),
         fetch(`/api/assets/${assetId}/takes`),
         fetch(`/api/assets/${assetId}/timeline`),
+        fetch(`/api/assets/${assetId}/timeline/lint`).catch(() => null),
       ]);
 
       if (assetRes.ok) {
@@ -54,6 +57,11 @@ export default function Home() {
       if (timelineRes.ok) {
         const timelineData = await timelineRes.json();
         setTimeline(timelineData);
+      }
+
+      if (lintRes && lintRes.ok) {
+        const lintData = await lintRes.json();
+        setQualityScore(lintData.qualityScore ?? 100);
       }
     } catch (err) {
       console.error('Failed to load asset details:', err);
@@ -87,6 +95,43 @@ export default function Home() {
   useEffect(() => {
     fetchAllAssets();
   }, []);
+
+  // Check ops log for undo availability
+  const checkOpsLog = async () => {
+    if (!currentAsset?.id) return;
+    try {
+      const res = await fetch(`/api/assets/${currentAsset.id}/ops`);
+      if (res.ok) {
+        const data = await res.json();
+        setCanUndo((data.ops || []).length > 0);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    checkOpsLog();
+  }, [currentAsset?.id, timeline]);
+
+  // Handle undo action
+  const handleUndo = async () => {
+    if (!currentAsset?.id) return;
+    try {
+      const res = await fetch(`/api/assets/${currentAsset.id}/undo`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.timeline) {
+          setTimeline(data.timeline);
+        } else {
+          loadAsset(currentAsset.id);
+        }
+        checkOpsLog();
+      }
+    } catch (e) {
+      console.error('Undo failed:', e);
+    }
+  };
 
   // WebSocket connection for real-time asset processing updates
   useEffect(() => {
@@ -148,7 +193,6 @@ export default function Home() {
 
   // Handle take selection change
   const handleSelectTake = async (groupId: string, segmentId: string | number) => {
-    // Optimistic update of groups state
     setGroups((prev) =>
       prev.map((g) => {
         if (g.id === groupId) {
@@ -199,8 +243,15 @@ export default function Home() {
     : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      {/* 1. Universal Top Header */}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      width: '100vw',
+      overflow: 'hidden',
+      backgroundColor: 'var(--bg-primary)',
+    }}>
+      {/* 1. Universal Studio Header */}
       <Header
         currentAsset={currentAsset}
         currentView={currentView}
@@ -209,39 +260,150 @@ export default function Home() {
         onOpenExport={() => setIsExportOpen(true)}
         onLoadDemoAsset={loadDemoAsset}
         isReadyToExport={activeAssetStatus === 'READY' && !!timeline}
+        qualityScore={qualityScore}
+        onUndo={handleUndo}
+        canUndo={canUndo}
       />
 
       {/* 2. Main Viewport Switcher */}
       {currentView === 'hub' ? (
-        <ProjectHub
-          assets={allAssets}
-          currentAssetId={currentAsset?.id || null}
-          onSelectAsset={(id) => loadAsset(id)}
-          onOpenUpload={() => setIsUploadOpen(true)}
-          onOpenStudio={() => setCurrentView('studio')}
-        />
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <ProjectHub
+            assets={allAssets}
+            currentAssetId={currentAsset?.id || null}
+            onSelectAsset={(id) => loadAsset(id)}
+            onOpenUpload={() => setIsUploadOpen(true)}
+            onOpenStudio={() => setCurrentView('studio')}
+          />
+        </div>
       ) : (
-        /* Studio Workspace View */
+        /* Professional Broadcast Studio NLE Layout */
         <main style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 420px',
-          gap: '16px',
-          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
           flex: 1,
-          maxWidth: '1800px',
-          margin: '0 auto',
-          width: '100%',
+          height: 'calc(100vh - 52px)',
+          overflow: 'hidden',
+          padding: '10px 14px 10px 14px',
+          gap: '10px',
           boxSizing: 'border-box',
         }}>
-          {/* Left Column: Broadcast Video Monitor + Multi-Track Timeline */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <WebCodecsPlayer
-              ref={playerRef}
-              src={videoSourceUrl}
-              onTimeUpdate={(t) => setCurrentTime(t)}
-              fps={currentAsset?.fps || 30}
-            />
+          {/* Top Half: Video Monitor (Left) + AI Inspector (Right) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1.45fr) 420px',
+            gap: '12px',
+            flex: '1 1 54%',
+            minHeight: '280px',
+            overflow: 'hidden',
+          }}>
+            {/* Broadcast Video Monitor */}
+            <div style={{ height: '100%', overflow: 'hidden' }}>
+              <WebCodecsPlayer
+                ref={playerRef}
+                src={videoSourceUrl}
+                onTimeUpdate={(t) => setCurrentTime(t)}
+                fps={currentAsset?.fps || 30}
+              />
+            </div>
 
+            {/* AI Copilot & Retake Inspector Side Dock */}
+            <div style={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: '#070a13',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-color)',
+              overflow: 'hidden',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+            }}>
+              {/* Tab Selector Header */}
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '6px',
+                backgroundColor: '#0a0d18',
+                borderBottom: '1px solid var(--border-color)',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setRightPanelTab('agent')}
+                  style={{
+                    flex: 1,
+                    padding: '6px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: rightPanelTab === 'agent' ? 'var(--accent-gradient)' : 'transparent',
+                    color: rightPanelTab === 'agent' ? '#ffffff' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: rightPanelTab === 'agent' ? '0 2px 10px rgba(99, 102, 241, 0.35)' : 'none',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <span>🤖 AI Copilot</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRightPanelTab('retakes')}
+                  style={{
+                    flex: 1,
+                    padding: '6px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
+                    background: rightPanelTab === 'retakes' ? 'var(--accent-gradient)' : 'transparent',
+                    color: rightPanelTab === 'retakes' ? '#ffffff' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    boxShadow: rightPanelTab === 'retakes' ? '0 2px 10px rgba(99, 102, 241, 0.35)' : 'none',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <span>✂ Retake Inspector</span>
+                </button>
+              </div>
+
+              {/* Panel Content Body */}
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                {rightPanelTab === 'agent' ? (
+                  <AgentPanel
+                    assetId={currentAsset?.id || null}
+                    timeline={timeline}
+                    onTimelineUpdated={() => {
+                      if (currentAsset?.id) loadAsset(currentAsset.id);
+                    }}
+                    onSeek={handleSeek}
+                  />
+                ) : (
+                  <RetakeInspector
+                    groups={groups}
+                    onSelectTake={handleSelectTake}
+                    onPreviewTake={handleSeek}
+                    currentTime={currentTime}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Half: Full-Width Multi-Track Timeline */}
+          <div style={{
+            flex: '0 0 auto',
+            width: '100%',
+            overflow: 'hidden',
+          }}>
             <TimelineTrack
               timeline={timeline}
               totalDuration={currentAsset?.duration || 20.0}
@@ -250,93 +412,15 @@ export default function Home() {
               assetId={currentAsset?.id}
               groups={groups}
               onSelectTake={handleSelectTake}
+              onTimelineMutated={() => {
+                if (currentAsset?.id) loadAsset(currentAsset.id);
+              }}
             />
-          </div>
-
-          {/* Right Column: AI Video Copilot & Retake Inspector */}
-          <div style={{ height: 'calc(100vh - 90px)', display: 'flex', flexDirection: 'column' }}>
-            {/* Tab switch header */}
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              marginBottom: '10px',
-              background: 'rgba(0, 0, 0, 0.35)',
-              padding: '4px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-            }}>
-              <button
-                type="button"
-                onClick={() => setRightPanelTab('agent')}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: rightPanelTab === 'agent' ? 'var(--accent-gradient)' : 'transparent',
-                  color: rightPanelTab === 'agent' ? '#ffffff' : 'var(--text-muted)',
-                  fontWeight: 600,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  boxShadow: rightPanelTab === 'agent' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>🤖 AI Copilot</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRightPanelTab('retakes')}
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: 'none',
-                  background: rightPanelTab === 'retakes' ? 'var(--accent-gradient)' : 'transparent',
-                  color: rightPanelTab === 'retakes' ? '#ffffff' : 'var(--text-muted)',
-                  fontWeight: 600,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  boxShadow: rightPanelTab === 'retakes' ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>✂ Retake Inspector</span>
-              </button>
-            </div>
-
-            {/* Tab content area */}
-            <div style={{ flex: 1, minHeight: 0 }}>
-              {rightPanelTab === 'agent' ? (
-                <AgentPanel
-                  assetId={currentAsset?.id || null}
-                  timeline={timeline}
-                  onTimelineUpdated={() => currentAsset?.id && loadAsset(currentAsset.id)}
-                  onSeek={handleSeek}
-                />
-              ) : (
-                <RetakeInspector
-                  groups={groups}
-                  onSelectTake={handleSelectTake}
-                  onPreviewTake={handleSeek}
-                  currentTime={currentTime}
-                />
-              )}
-            </div>
           </div>
         </main>
       )}
 
-      {/* 3. Global Modals */}
+      {/* 3. Global Dialogs */}
       <UploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}

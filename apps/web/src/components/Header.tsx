@@ -12,7 +12,12 @@ import {
   Zap,
   Sparkles,
   Layers,
-  Activity
+  Activity,
+  ShieldCheck,
+  Undo2,
+  Redo2,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import type { Asset } from '../../../../packages/contracts';
 
@@ -24,6 +29,11 @@ interface HeaderProps {
   onOpenExport: () => void;
   onLoadDemoAsset: () => void;
   isReadyToExport: boolean;
+  qualityScore?: number | null;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -34,50 +44,65 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExport,
   onLoadDemoAsset,
   isReadyToExport,
+  qualityScore = 100,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }) => {
   return (
-    <header className="glass" style={{
+    <header style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '12px 24px',
+      padding: '8px 20px',
       borderBottom: '1px solid var(--border-color)',
+      backgroundColor: '#070912',
       position: 'sticky',
       top: 0,
-      zIndex: 40,
-      backgroundColor: 'rgba(10, 13, 20, 0.92)',
+      zIndex: 50,
+      height: '52px',
+      boxSizing: 'border-box',
     }}>
       {/* 1. Left: Brand & Studio Mode */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
             background: 'var(--accent-gradient)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.45)',
+            boxShadow: '0 2px 12px rgba(99, 102, 241, 0.4)',
           }}>
-            <Film size={20} color="#ffffff" />
+            <Film size={18} color="#ffffff" />
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>TakePicker</span>
-              <span className="badge badge-purple" style={{ fontSize: '0.68rem', padding: '2px 7px' }}>
-                NLE Studio v2.0
-              </span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.05rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
+              TakePicker
+            </span>
+            <span style={{
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: '4px',
+              background: 'rgba(99, 102, 241, 0.18)',
+              color: '#a5b4fc',
+              border: '1px solid rgba(99, 102, 241, 0.35)',
+            }}>
+              STUDIO PRO
+            </span>
           </div>
         </div>
 
-        {/* View Switcher: Studio vs Project Hub */}
+        {/* View Switcher: Studio Workspace vs Project Hub */}
         <div style={{
           display: 'flex',
-          background: 'rgba(0, 0, 0, 0.35)',
-          padding: '3px',
-          borderRadius: 'var(--radius-md)',
+          background: 'rgba(0, 0, 0, 0.45)',
+          padding: '2px',
+          borderRadius: 'var(--radius-sm)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
         }}>
           <button
@@ -87,18 +112,18 @@ export const Header: React.FC<HeaderProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
+              padding: '5px 12px',
+              borderRadius: '4px',
               border: 'none',
-              background: currentView === 'studio' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              background: currentView === 'studio' ? 'rgba(99, 102, 241, 0.28)' : 'transparent',
               color: currentView === 'studio' ? '#ffffff' : 'var(--text-muted)',
               fontWeight: 600,
-              fontSize: '0.82rem',
+              fontSize: '0.78rem',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'all 0.15s ease',
             }}
           >
-            <SlidersHorizontal size={14} color={currentView === 'studio' ? '#818cf8' : 'currentColor'} />
+            <SlidersHorizontal size={13} color={currentView === 'studio' ? '#818cf8' : 'currentColor'} />
             <span>Studio Workspace</span>
           </button>
 
@@ -109,70 +134,162 @@ export const Header: React.FC<HeaderProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
+              padding: '5px 12px',
+              borderRadius: '4px',
               border: 'none',
-              background: currentView === 'hub' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+              background: currentView === 'hub' ? 'rgba(99, 102, 241, 0.28)' : 'transparent',
               color: currentView === 'hub' ? '#ffffff' : 'var(--text-muted)',
               fontWeight: 600,
-              fontSize: '0.82rem',
+              fontSize: '0.78rem',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'all 0.15s ease',
             }}
           >
-            <FolderKanban size={14} color={currentView === 'hub' ? '#818cf8' : 'currentColor'} />
-            <span>Projects & Hub</span>
+            <FolderKanban size={13} color={currentView === 'hub' ? '#818cf8' : 'currentColor'} />
+            <span>Projects Hub</span>
           </button>
         </div>
+
+        {/* Quick Undo / Redo in Header */}
+        {currentView === 'studio' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <button
+              type="button"
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Undo Last Action (Ctrl+Z)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                padding: '4px 7px',
+                color: canUndo ? 'var(--text-main)' : 'var(--text-dim)',
+                cursor: canUndo ? 'pointer' : 'default',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontSize: '0.72rem',
+              }}
+            >
+              <Undo2 size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                padding: '4px 7px',
+                color: canRedo ? 'var(--text-main)' : 'var(--text-dim)',
+                cursor: canRedo ? 'pointer' : 'default',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontSize: '0.72rem',
+              }}
+            >
+              <Redo2 size={13} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 2. Middle: Active Project Pill */}
+      {/* 2. Middle: Active Project Pill & Quality Indicator */}
       {currentAsset && (
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           background: 'rgba(255, 255, 255, 0.03)',
-          padding: '6px 14px',
+          padding: '4px 12px',
           borderRadius: 'var(--radius-sm)',
           border: '1px solid var(--border-color)',
-          fontSize: '0.82rem',
+          fontSize: '0.78rem',
         }}>
-          <span style={{ fontWeight: 600, color: 'var(--text-main)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{
+            fontWeight: 600,
+            color: 'var(--text-main)',
+            maxWidth: '220px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
             {currentAsset.filename}
           </span>
+
           {currentAsset.duration && (
-            <span className="font-mono" style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-              {Math.floor(currentAsset.duration)}s @ {currentAsset.fps || 30}fps
+            <span className="font-mono" style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+              {Math.floor(currentAsset.duration / 60)}:{String(Math.floor(currentAsset.duration % 60)).padStart(2, '0')} @ {currentAsset.fps || 30}fps
             </span>
           )}
-          <span className={`badge ${currentAsset.status === 'READY' ? 'badge-green' : 'badge-amber'}`}>
+
+          {/* Verification Quality Score Badge */}
+          {qualityScore !== null && qualityScore !== undefined && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '2px 7px',
+              borderRadius: '999px',
+              background: qualityScore >= 90
+                ? 'rgba(16, 185, 129, 0.15)'
+                : qualityScore >= 75
+                ? 'rgba(245, 158, 11, 0.15)'
+                : 'rgba(239, 68, 68, 0.15)',
+              border: qualityScore >= 90
+                ? '1px solid rgba(16, 185, 129, 0.35)'
+                : qualityScore >= 75
+                ? '1px solid rgba(245, 158, 11, 0.35)'
+                : '1px solid rgba(239, 68, 68, 0.35)',
+              color: qualityScore >= 90
+                ? '#6ee7b7'
+                : qualityScore >= 75
+                ? '#fcd34d'
+                : '#fca5a5',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+            }}>
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: qualityScore >= 90 ? '#10b981' : qualityScore >= 75 ? '#f59e0b' : '#ef4444',
+                boxShadow: `0 0 6px ${qualityScore >= 90 ? '#10b981' : qualityScore >= 75 ? '#f59e0b' : '#ef4444'}`,
+              }} />
+              <span>{qualityScore}% Quality</span>
+            </div>
+          )}
+
+          <span className={`badge ${currentAsset.status === 'READY' ? 'badge-green' : 'badge-amber'}`} style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
             {currentAsset.status}
           </span>
         </div>
       )}
 
       {/* 3. Right: Action Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Link
           href="/guide"
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(99, 102, 241, 0.12)',
-            border: '1px solid rgba(99, 102, 241, 0.35)',
+            gap: '5px',
+            padding: '6px 11px',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.25)',
             color: '#a5b4fc',
-            fontSize: '0.84rem',
+            fontSize: '0.78rem',
             fontWeight: 600,
             textDecoration: 'none',
-            transition: 'all 0.2s',
+            transition: 'all 0.15s ease',
           }}
         >
-          <BookOpen size={15} color="#818cf8" />
-          <span>System Guide</span>
+          <BookOpen size={13} color="#818cf8" />
+          <span>Guide</span>
         </Link>
 
         <button
@@ -181,19 +298,19 @@ export const Header: React.FC<HeaderProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(34, 197, 94, 0.12)',
-            border: '1px solid rgba(34, 197, 94, 0.35)',
+            gap: '5px',
+            padding: '6px 11px',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.28)',
             color: '#86efac',
-            fontSize: '0.84rem',
+            fontSize: '0.78rem',
             fontWeight: 600,
             cursor: 'pointer',
-            transition: 'all 0.2s',
+            transition: 'all 0.15s ease',
           }}
         >
-          <Play size={14} fill="#86efac" />
+          <Play size={12} fill="#86efac" />
           <span>Demo Video</span>
         </button>
 
@@ -201,10 +318,10 @@ export const Header: React.FC<HeaderProps> = ({
           type="button"
           onClick={onOpenUpload}
           className="btn-secondary"
-          style={{ padding: '8px 14px', fontSize: '0.84rem' }}
+          style={{ padding: '6px 12px', fontSize: '0.78rem' }}
         >
-          <UploadCloud size={16} />
-          <span>Upload Footage</span>
+          <UploadCloud size={14} />
+          <span>Upload</span>
         </button>
 
         <button
@@ -213,13 +330,13 @@ export const Header: React.FC<HeaderProps> = ({
           disabled={!isReadyToExport}
           className="btn-primary"
           style={{
-            padding: '8px 18px',
-            fontSize: '0.84rem',
+            padding: '6px 14px',
+            fontSize: '0.78rem',
             opacity: isReadyToExport ? 1 : 0.4,
             cursor: isReadyToExport ? 'pointer' : 'not-allowed',
           }}
         >
-          <Zap size={15} />
+          <Zap size={14} />
           <span>Export Clean Cut</span>
         </button>
       </div>

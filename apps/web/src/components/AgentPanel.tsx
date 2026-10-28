@@ -303,10 +303,11 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
   };
 
   const quickPresets = [
+    '⚡ Auto-repair all defects and microfades',
+    '✂ Remove dead air pauses >0.5s',
+    '✨ Strip filler words (ums/uhs)',
     'Use the second take of the intro',
-    'Remove clip 2',
-    'Remove all filler words (ums/uhs)',
-    'Cut between 10s and 15s',
+    'Tighten pacing for TikTok / Shorts',
     'Undo last edit',
   ];
 
