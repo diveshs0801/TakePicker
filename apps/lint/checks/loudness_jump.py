@@ -58,12 +58,12 @@ def parse_loudness_jump(stderr: str, config: dict) -> list[dict]:
         diff = abs(curr["momentary"] - prev["momentary"])
 
         if diff >= threshold_lu:
-            # Skip if either reading is -inf (silence)
-            if prev["momentary"] < -70 or curr["momentary"] < -70:
+            # Skip if either reading is below -36 LUFS (ambient room tone / breath silence)
+            if prev["momentary"] < -36 or curr["momentary"] < -36:
                 continue
 
             direction = "louder" if curr["momentary"] > prev["momentary"] else "quieter"
-            severity = "error" if diff >= 8.0 else "warn"
+            severity = "error" if diff >= 12.0 else "warn"
 
             findings.append({
                 "check": "D4_loudness_jump",

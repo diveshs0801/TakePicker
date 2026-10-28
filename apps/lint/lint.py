@@ -43,18 +43,30 @@ def load_config(config_path: str = None) -> dict:
 
 
 def get_video_duration(filepath: str) -> float:
-    """Get video duration via ffprobe."""
-    cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "json",
-        filepath
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"ffprobe failed: {result.stderr}")
-    data = json.loads(result.stdout)
-    return float(data["format"]["duration"])
+    """Get video duration via ffprobe or ffmpeg fallback."""
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "json",
+            filepath
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            data = json.loads(result.stdout)
+            return float(data["format"]["duration"])
+    except Exception:
+        pass
+
+    # Robust fallback: extract from ffmpeg -i output
+    import re
+    cmd_ff = ["ffmpeg", "-i", filepath]
+    res = subprocess.run(cmd_ff, capture_output=True, text=True)
+    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.?\d*)", res.stderr)
+    if m:
+        h, mn, s = m.groups()
+        return int(h) * 3600 + int(mn) * 60 + float(s)
+    raise RuntimeError(f"Could not determine video duration for {filepath}")
 
 
 def run_single_pass(filepath: str, config: dict) -> str:

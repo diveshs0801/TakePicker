@@ -18,8 +18,11 @@ def check_av_sync(filepath: str, threshold_ms: float = 40.0) -> Optional[Dict[st
         "-of", "json",
         filepath
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            return None
+    except Exception:
         return None
 
     try:

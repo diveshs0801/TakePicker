@@ -1,0 +1,91 @@
+{
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "ast_latency_ms": 0.0,
+  "auto_repair_success": true,
+  "score_before": 73,
+  "score_after": 100,
+  "details": {
+    "D1": {
+      "name": "Injected 0.6s black screen",
+      "expected_detected": true,
+      "actual_detected": true,
+      "loc_error": 0.04100000000000037,
+      "latency_ms": 2568.54248046875,
+      "raw_findings_count": 5
+    },
+    "D2": {
+      "name": "Injected 1.0s video freeze",
+      "expected_detected": true,
+      "actual_detected": true,
+      "loc_error": 0.04100000000000037,
+      "latency_ms": 2347.750663757324,
+      "raw_findings_count": 5
+    },
+    "D3": {
+      "name": "Injected 0.7s audio dropout (muted speech)",
+      "expected_detected": true,
+      "actual_detected": true,
+      "loc_error": 0.005999999999999783,
+      "latency_ms": 3758.3870887756348,
+      "raw_findings_count": 4
+    },
+    "D4": {
+      "name": "Injected +12dB audio loudness surge",
+      "expected_detected": true,
+      "actual_detected": true,
+      "loc_error": 18.6,
+      "latency_ms": 3425.2333641052246,
+      "raw_findings_count": 6
+    },
+    "D8": {
+      "name": "Clean control edit with 15ms acoustic microfades",
+      "expected_detected": false,
+      "actual_detected": false,
+      "loc_error": null,
+      "latency_ms": 1363.170862197876,
+      "raw_findings_count": 5
+    },
+    "D7": {
+      "name": "Injected mid-word cutoff at boundary (D7)",
+      "expected_detected": true,
+      "actual_detected": true,
+      "loc_error": 0.0,
+      "latency_ms": 0.0,
+      "score_before": 73,
+      "findings": [
+        {
+          "rule": "WORD_CUTOFF",
+          "severity": "error",
+          "timestamp": 2.95,
+          "word": "birthday",
+          "word_bounds": [
+            2.7,
+            3.25
+          ],
+          "suggested_repair": {
+            "op": "trim_clip",
+            "clip_id": "c1",
+            "new_in": 1.2,
+            "new_out": 3.2916666666666665
+          },
+          "message": "Cut at 2.95s amputates ending of word 'birthday'."
+        },
+        {
+          "rule": "AUDIO_POP_RISK",
+          "severity": "warning",
+          "timestamp": 2.95,
+          "message": "Hard cut between non-contiguous speech segments without 15ms audio microfade."
+        }
+      ]
+    },
+    "D7_Repair": {
+      "name": "Closed-Loop Self-Healing Boundary Repair",
+      "repair_success": true,
+      "score_before": 73,
+      "score_after": 100,
+      "errors_remaining": 0
+    }
+  }
+}

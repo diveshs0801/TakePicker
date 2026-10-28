@@ -18,6 +18,7 @@ import {
   SilenceInterval,
   SilenceDetectionOptions,
   SilenceRemovalResult,
+  TimelineLintReport,
 } from '../../../../packages/contracts';
 import {
   applyOperation,
@@ -31,6 +32,7 @@ import {
   TimelineInvariantViolation,
 } from './timeline.invariants';
 import { detectSilences, generateJumpCutTimeline } from './silence.detector';
+import { TimelineLinter } from './timeline.linter';
 import { randomUUID } from 'node:crypto';
 
 export class StructuredOpException extends BadRequestException {
@@ -543,6 +545,116 @@ export class TimelineService {
       newClipsCount: res.timeline.clips.length,
       timeline: res.timeline,
       intervals: silences,
+    };
+  }
+
+  /**
+   * Runs the Static Timeline AST Linter across technical and pacing tiers.
+   */
+  async lintTimeline(assetId: string): Promise<TimelineLintReport> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    const asset = await this.assetsService.getAsset(assetId);
+    let words: any[] = [];
+    try {
+      const transcript = await this.assetsService.getTranscript(assetId);
+      words = transcript?.words || [];
+    } catch {
+      words = [];
+    }
+
+    const linter = new TimelineLinter();
+    const report = linter.lint(timeline, {
+      words,
+      assetDuration: asset?.duration,
+      fps: timeline.fps || 30,
+    });
+
+    this.wsGateway.emitToAsset(assetId, 'timeline:lint_report', {
+      assetId,
+      score: report.score,
+      valid: report.valid,
+      findingsCount: report.findings.length,
+      report,
+    });
+
+    return report;
+  }
+
+  /**
+   * Executes an autonomous self-healing repair pass over detected linter defects.
+   */
+  async autoRepairTimeline(
+    assetId: string,
+    actor: 'user' | 'agent' = 'user',
+    agentRunId?: string
+  ): Promise<{
+    repaired: boolean;
+    repairsApplied: number;
+    initialScore: number;
+    finalScore: number;
+    timeline: Timeline;
+    report: TimelineLintReport;
+  }> {
+    const initialReport = await this.lintTimeline(assetId);
+    if (initialReport.valid && initialReport.findings.length === 0) {
+      const { timeline } = await this.getTimelineAt(assetId);
+      return {
+        repaired: false,
+        repairsApplied: 0,
+        initialScore: initialReport.score,
+        finalScore: initialReport.score,
+        timeline,
+        report: initialReport,
+      };
+    }
+
+    let repairsCount = 0;
+    const { timeline: currentTimeline } = await this.getTimelineAt(assetId);
+
+    // Apply deterministic boundary snaps and repairs
+    for (const finding of initialReport.findings) {
+      if (finding.clipId && finding.suggestedRepair) {
+        const targetClip = currentTimeline.clips.find((c) => c.id === finding.clipId);
+        if (targetClip) {
+          const newIn = finding.suggestedRepair.suggestedIn ?? targetClip.in;
+          const newOut = finding.suggestedRepair.suggestedOut ?? targetClip.out;
+
+          if (newIn !== targetClip.in || newOut !== targetClip.out) {
+            await this.applyOp(
+              assetId,
+              'TRIM_CLIP',
+              {
+                clipId: targetClip.id,
+                newIn,
+                newOut,
+              },
+              actor,
+              agentRunId
+            );
+            repairsCount++;
+          }
+        }
+      }
+    }
+
+    const finalReport = await this.lintTimeline(assetId);
+    const { timeline: finalTimeline } = await this.getTimelineAt(assetId);
+
+    this.wsGateway.emitToAsset(assetId, 'timeline:auto_repaired', {
+      assetId,
+      repairsApplied: repairsCount,
+      initialScore: initialReport.score,
+      finalScore: finalReport.score,
+      valid: finalReport.valid,
+    });
+
+    return {
+      repaired: repairsCount > 0,
+      repairsApplied: repairsCount,
+      initialScore: initialReport.score,
+      finalScore: finalReport.score,
+      timeline: finalTimeline,
+      report: finalReport,
     };
   }
 }

@@ -327,3 +327,73 @@ export interface SilenceRemovalResult {
   timeline: Timeline;
   intervals: SilenceInterval[];
 }
+
+// ==============================================================================
+// Cardboard AI Hard Problem #09: Video Verification & Linting Engine
+// ==============================================================================
+
+export type LintSeverity = 'error' | 'warning' | 'info';
+export type LintCategory = 'technical' | 'pacing' | 'audio' | 'cadence';
+
+export type LintRuleId =
+  | 'WORD_CUTOFF'               // Tier 1: Cut intersects a spoken word token
+  | 'AUDIO_POP_RISK'           // Tier 1: Hard cut boundary missing microfade
+  | 'GAP_JITTER'               // Tier 1: Sub-frame gap (< 1/fps) causing black flash
+  | 'UNSNAPPED_FRAME_GRID'     // Tier 1: Timestamp not locked to video FPS grid
+  | 'ZERO_DURATION_CLIP'       // Tier 1: Degenerate in >= out clip
+  | 'OUT_OF_BOUNDS_CLIP'       // Tier 1: Clip out point exceeds asset duration
+  | 'HOOK_DEAD_AIR'            // Tier 2: First spoken word delayed > 1.0s in hook window
+  | 'SHOT_PACING_STAGNATION'   // Tier 2: Single clip duration > 12.0s without cut
+  | 'DEAD_AIR_DENSITY'         // Tier 2: Excessive pause duration (> 15% of timeline)
+  | 'RAPID_FIRE_CUT_CLUSTER'   // Tier 2: > 3 cuts in < 1.0s causing visual flutter
+  | 'SPEECH_CADENCE_WPM'       // Tier 2: Conversational rate out of optimal bounds (<110 or >210 WPM)
+  | 'D1_BLACK_FRAMES'          // Dynamic: Black frame sequence detected
+  | 'D2_FROZEN_VIDEO'          // Dynamic: Repeated frozen frames detected
+  | 'D3_AUDIO_DROPOUT'         // Dynamic: Muted audio dropout detected
+  | 'D4_LOUDNESS_JUMP';        // Dynamic: Jarring audio gain surge detected
+
+export interface LintFinding {
+  id: string;
+  rule: LintRuleId;
+  category: LintCategory;
+  severity: LintSeverity;
+  message: string;
+  timestamp: number;          // Timeline seconds where defect occurs
+  endTimestamp?: number;      // Optional end timestamp
+  clipId?: string;
+  sourceTimestamp?: number;   // In source asset time
+  details?: Record<string, any>;
+  suggestedRepair?: {
+    opType: 'trim_clip' | 'split_clip' | 'remove_range' | 'snap_bounds';
+    clipId?: string;
+    suggestedIn?: number;
+    suggestedOut?: number;
+    explanation: string;
+  };
+}
+
+export interface TimelineLintReport {
+  valid: boolean;
+  score: number;               // 0 to 100 composite verification score
+  tier1Passed: boolean;        // Zero-glitch technical floor passed
+  tier2Passed: boolean;        // Editorial & pacing quality passed
+  findings: LintFinding[];
+  metrics: {
+    totalDuration: number;
+    clipCount: number;
+    avgClipDuration: number;
+    wordsPerMinute: number;
+    deadAirSeconds: number;
+    deadAirPercent: number;
+    hookLatencySeconds: number;
+    errorCount: number;
+    warningCount: number;
+  };
+  suggestedRepairs: Array<{
+    rule: LintRuleId;
+    clipId?: string;
+    repairAction: string;
+    targetBounds: { in: number; out: number };
+    explanation: string;
+  }>;
+}

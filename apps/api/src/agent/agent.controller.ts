@@ -118,5 +118,21 @@ export class AgentController {
       'user'
     );
   }
+
+  @Get('assets/:id/timeline/lint')
+  async lintTimeline(@Param('id') assetId: string) {
+    return await this.timelineService.lintTimeline(assetId);
+  }
+
+  @Post('assets/:id/timeline/auto-repair')
+  async autoRepairTimeline(
+    @Param('id') assetId: string,
+    @Body() body?: { actor?: 'user' | 'agent' }
+  ) {
+    return await this.timelineService.autoRepairTimeline(
+      assetId,
+      body?.actor || 'user'
+    );
+  }
 }
 

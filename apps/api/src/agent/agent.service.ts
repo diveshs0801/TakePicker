@@ -135,13 +135,63 @@ export class AgentService {
 
         const toolCalls = assistantMsg.tool_calls || [];
 
-        // If no tool calls, model gave final answer
+        // If no tool calls, model gave final answer or wants to conclude
         if (toolCalls.length === 0) {
+          // Closed-Loop Verification Guard:
+          // If timeline operations were performed during this run, run the AST Linter
+          const hasTimelineEdits = recordedSteps.some((s) => s.toolCalls.length > 0);
+          if (hasTimelineEdits) {
+            try {
+              const lintReport = await this.timelineService.lintTimeline(assetId);
+              const criticalErrors = lintReport.findings.filter((f) => f.severity === 'error');
+
+              // If critical technical errors remain and we have not exceeded retry budget
+              if (criticalErrors.length > 0 && stepCount < maxSteps - 1) {
+                this.logger.warn(
+                  `[AgentService] ⚠️ Linter caught ${criticalErrors.length} technical defect(s) on asset ${assetId} (Score: ${lintReport.score}/100). Triggering agent self-healing pass.`
+                );
+
+                const errorList = criticalErrors
+                  .map(
+                    (e) =>
+                      `• [${e.rule}] at ${e.timestamp.toFixed(2)}s: ${e.message}\n  Recommended fix: ${e.suggestedRepair?.explanation || 'Adjust boundary to nearest silence'}`
+                  )
+                  .join('\n');
+
+                messages.push({
+                  role: 'user',
+                  content:
+                    `⚠️ VERIFICATION LINTER AUDIT FAILED (Quality Score: ${lintReport.score}/100):\n` +
+                    `The timeline has ${criticalErrors.length} defect(s) that will cause video/audio glitches:\n` +
+                    `${errorList}\n\n` +
+                    `Execute a repair operation (e.g. trim_clip or remove_range) to fix these boundaries now.`,
+                });
+
+                this.wsGateway.emitToAsset(assetId, 'agent:self_healing_triggered', {
+                  runId,
+                  step: stepCount,
+                  score: lintReport.score,
+                  defectsCount: criticalErrors.length,
+                  findings: criticalErrors,
+                });
+
+                continue; // Loop continues to allow agent to repair
+              }
+
+              // Timeline verified clean!
+              currentStepRecord.response =
+                (currentStepRecord.response || '') +
+                `\n\n🛡️ **TakePicker Quality Verification**: Passed (${lintReport.score}/100). Zero technical glitches detected.`;
+            } catch (lintErr) {
+              this.logger.warn(`Linter verification check skipped: ${lintErr}`);
+            }
+          }
+
           recordedSteps.push(currentStepRecord);
           this.wsGateway.emitToAsset(assetId, 'agent:message', {
             runId,
             step: stepCount,
-            message: assistantMsg.content,
+            message: currentStepRecord.response || assistantMsg.content,
           });
           break;
         }
