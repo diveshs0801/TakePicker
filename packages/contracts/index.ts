@@ -620,4 +620,101 @@ export interface VideoRLEnvironmentState {
   history: { iteration: number; reward: number; retentionLiftPct: number }[];
 }
 
+// =========================================================================
+// Frontier Problem #09 Extensions: Dense Hazard Attribution, Causal DML,
+// Creator Style Fingerprint, Video DPO, and Tri-Modal Manifold
+// =========================================================================
+
+export interface HazardRatePoint {
+  second: number;
+  retention: number;        // R(t) in [0.0, 1.0]
+  hazardRate: number;       // h(t) = - (1/R) * dR/dt
+  isDropOffCliff: boolean;  // True if h(t) > threshold
+}
+
+export interface CutCreditAttribution {
+  cutIndex: number;
+  clipId: string;
+  timestamp: number;
+  transitionType: string;
+  associatedHazardDelta: number; // Localized penalty from hazard spike
+  stepReward: number;            // Local credit assigned to this specific cut
+  verdict: 'EXCELLENT' | 'NEUTRAL' | 'HAZARD_INDUCED';
+  rootCause?: string;
+}
+
+export interface CausalTreatmentResult {
+  assetId: string;
+  observedRetention: number;       // Y_i (raw observed retention)
+  creatorBaselineExpected: number; // g(Z_i) (expected baseline from subscriber count & past stats)
+  topicViralityPrior: number;      // Prior from subject matter
+  trueCausalLift: number;          // tau(X_i) = Y_i - g(Z_i) (true impact of the edit)
+  isStatisticallySignificant: boolean;
+}
+
+export type CreativeSpanType =
+  | 'COMEDIC_PAUSE'        // Deadpan or punchline silence (NEVER jump-cut)
+  | 'DRAMATIC_BUILDUP'     // Slow cinematic accumulation of tension
+  | 'REACTION_BEAT'        // Subject facial reaction without speech
+  | 'MUSIC_MONTAGE';       // Visual rhythm driven by soundtrack
+
+export interface ProtectedCreativeSpan {
+  id: string;
+  type: CreativeSpanType;
+  start: number;
+  end: number;
+  rationale: string;
+  lockedBy: 'creator' | 'agent_intent_inferred';
+}
+
+export interface CreatorStyleFingerprint {
+  creatorId: string;
+  channelName: string;
+  archetype: 'CINEMATIC_STORYTELLER' | 'FAST_PACED_SOCIAL' | 'COMEDIC_PERFORMER' | 'EXPERIMENTAL';
+  metrics: {
+    avgShotLengthSec: number;        // e.g. 4.2s for cinematic, 1.4s for hyper-shorts
+    silenceToleranceSec: number;     // e.g. 1.2s for comedy/drama, 0.25s for tech reviews
+    brollToArollRatio: number;       // e.g. 0.35 (35% B-roll)
+    zoomPunchFrequencyPerMin: number;// e.g. 2.0 vs 14.0
+    colorGradePalette: string[];     // Array of brand #HEX tones
+  };
+  klDivergenceTolerance: number;     // Maximum allowable artistic drift
+  protectedSpans: ProtectedCreativeSpan[];
+}
+
+export interface VideoDPOPreferencePair {
+  id: string;
+  assetId: string;
+  timestamp: number;
+  contextWindow: {
+    start: number;
+    end: number;
+    transcriptSlice: string;
+  };
+  winningEdit: {
+    action: string;
+    cutTimestamp: number;
+    zoomLevel?: number;
+    actor: 'human_editor';
+  };
+  losingEdit: {
+    action: string;
+    cutTimestamp: number;
+    zoomLevel?: number;
+    actor: 'ai_proposal_undone';
+  };
+  dpoLogRatioDelta: number; // beta * (log pi(y_w) - log pi(y_l))
+  createdAt: string;
+}
+
+export interface TriModalCutCandidate {
+  targetTimestamp: number;
+  optimalCutTimestamp: number;
+  phoneticEnergyScore: number; // 0 = quiet zero-crossing room tone (best)
+  musicBeatDistanceMs: number;  // Distance to nearest musical downbeat / transient
+  opticalFlowMinimaMs: number;  // Distance to visual kinetic resting point
+  compositeEnergyCost: number;  // Lowest = optimal harmonic cut point
+}
+
+
 

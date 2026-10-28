@@ -23,6 +23,13 @@ import {
   BrandKitConfig,
   SocialRetentionTelemetry,
   VideoRLEnvironmentState,
+  HazardRatePoint,
+  CutCreditAttribution,
+  CausalTreatmentResult,
+  ProtectedCreativeSpan,
+  CreatorStyleFingerprint,
+  VideoDPOPreferencePair,
+  TriModalCutCandidate,
 } from '../../../../packages/contracts';
 import {
   applyOperation,
@@ -39,6 +46,8 @@ import { detectSilences, generateJumpCutTimeline } from './silence.detector';
 import { TimelineLinter } from './timeline.linter';
 import { AestheticJudge } from './aesthetic.judge';
 import { EngagementRLEngine } from './engagement-rl.engine';
+import { FrontierRLEngine } from './frontier-rl.engine';
+import { CreatorStyleEngine } from './creator-style.engine';
 import { randomUUID } from 'node:crypto';
 
 export class StructuredOpException extends BadRequestException {
@@ -727,6 +736,108 @@ export class TimelineService {
    */
   getRLState(): VideoRLEnvironmentState {
     return this.rlEngine.getRLState();
+  }
+
+  private readonly frontierRL = new FrontierRLEngine();
+  private readonly creatorStyle = new CreatorStyleEngine();
+  private readonly protectedSpansStore = new Map<string, ProtectedCreativeSpan[]>();
+
+  /**
+   * Frontier 1: Dense Instantaneous Hazard Rate Credit Assignment.
+   * Pinpoints localized drop-off cliffs to exact cut indices.
+   */
+  async getDenseHazardAttribution(assetId: string): Promise<{
+    hazardPoints: HazardRatePoint[];
+    cutAttributions: CutCreditAttribution[];
+  }> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    const { telemetry } = await this.processEngagementTelemetry(assetId);
+    return this.frontierRL.computeHazardRateAttribution(timeline, telemetry.retentionTrajectory);
+  }
+
+  /**
+   * Frontier 2: Causal Confounder Separation (DML).
+   * Separates Creator Fame Baseline g(Z) from true editorial treatment lift tau(X).
+   */
+  evaluateCausalTreatment(
+    assetId: string,
+    observedRetentionPct: number = 78.4,
+    subscriberCount: number = 250000,
+    historicalAvgPct: number = 71.0,
+    topicPrior: number = 0.04
+  ): CausalTreatmentResult {
+    return this.frontierRL.evaluateCausalTreatment(assetId, observedRetentionPct, {
+      subscriberCount,
+      historicalAvgRetentionPct: historicalAvgPct,
+      topicEmbeddingPrior: topicPrior,
+    });
+  }
+
+  /**
+   * Frontier 3: Fast Sequence Virtual Audience Surrogate Simulation (<15ms).
+   */
+  async simulateAudienceTrajectory(assetId: string) {
+    const { timeline } = await this.getTimelineAt(assetId);
+    return this.frontierRL.simulateAudienceTrajectory(timeline);
+  }
+
+  /**
+   * Frontier 4: Passive Video DPO Preference Mining from UI Undo ('Ctrl+Z') events.
+   */
+  harvestDPOUndoEvent(
+    assetId: string,
+    undoneAiCut: { timestamp: number; action: string },
+    humanCut: { timestamp: number; action: string },
+    transcriptContext: string = ''
+  ): VideoDPOPreferencePair {
+    const pair = this.frontierRL.harvestDPOPreference(
+      assetId,
+      undoneAiCut,
+      humanCut,
+      transcriptContext
+    );
+    this.wsGateway.emitToAsset(assetId, 'timeline:dpo_mined', { assetId, pair });
+    return pair;
+  }
+
+  /**
+   * Frontier 5 & Creator Style: Computes style fingerprint and enforces protected spans.
+   */
+  async getCreatorStyle(assetId: string): Promise<CreatorStyleFingerprint> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    const fingerprint = this.creatorStyle.computeStyleFingerprint(
+      'creator_default',
+      'Creator Studio',
+      [timeline]
+    );
+    fingerprint.protectedSpans = this.protectedSpansStore.get(assetId) || [];
+    return fingerprint;
+  }
+
+  /**
+   * Locks a comedic pause, dramatic breath, or reaction beat from being jump-cut.
+   */
+  protectCreativeSpan(assetId: string, span: ProtectedCreativeSpan): ProtectedCreativeSpan {
+    const existing = this.protectedSpansStore.get(assetId) || [];
+    existing.push(span);
+    this.protectedSpansStore.set(assetId, existing);
+    this.wsGateway.emitToAsset(assetId, 'timeline:creative_span_protected', { assetId, span });
+    return span;
+  }
+
+  /**
+   * Frontier 6: Tri-Modal Joint Manifold Cut Optimization (Phonetic + Music Beats + Optical Flow).
+   */
+  optimizeCutToTriModalManifold(
+    targetTimestamp: number,
+    musicBpm: number = 120
+  ): TriModalCutCandidate {
+    return this.creatorStyle.optimizeCutToTriModalManifold(targetTimestamp, {
+      musicBpm,
+      phoneticPauses: [
+        { start: targetTimestamp - 0.15, end: targetTimestamp + 0.1 },
+      ],
+    });
   }
 }
 

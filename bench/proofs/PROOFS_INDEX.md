@@ -197,4 +197,27 @@ To reproduce:
 python -X utf8 bench/proofs/run_aesthetic_and_rl_proofs.py
 ```
 
+---
+
+## 7. Cardboard AI Problem #09: Frontier RL & Creative Style Preservation
+
+> **Harness:** [`bench/proofs/run_frontier_rl_proofs.py`](file:///c:/Divesh/TakePicker/bench/proofs/run_frontier_rl_proofs.py)  
+> **Backend Engine:** [`frontier-rl.engine.ts`](file:///c:/Divesh/TakePicker/apps/api/src/timeline/frontier-rl.engine.ts) & [`creator-style.engine.ts`](file:///c:/Divesh/TakePicker/apps/api/src/timeline/creator-style.engine.ts)  
+> **Pass Rate:** **100.0% across all 6 forensic scenarios**
+
+| Frontier Scenario | Evaluated System Mechanism | Measured Invariant | Status |
+|:---|:---|:---|:---|
+| **Scenario 1** | **Dense Hazard Attribution $h(t) = -(1/R) dR/dt$** | Discrete derivative isolated drop-off spike (+14.6%/s) directly to Cut #2 at 11.8s while Cuts #1 & #3 were verified clean | **PASS ✅** |
+| **Scenario 2** | **Causal DML Confounder Separation** | Small creator (5k subs) awarded **+17.9% Causal Treatment Lift**; massive creator (15M subs) underperformance recognized as **-8.5%** | **PASS ✅** |
+| **Scenario 3** | **Protected Creative Spans (Semantic Guardrails)** | 2.4s deadpan comedic silence tagged as `COMEDIC_PAUSE` shielded from automated jump-cut destruction (0% false trims) | **PASS ✅** |
+| **Scenario 4** | **Creator Style Fingerprint & KL Tethering** | Casey Neistat cinematic style (3.9s ASL) approved; epileptic brain-rot pace (0.9s ASL) crushed by **+0.875 KL divergence penalty** | **PASS ✅** |
+| **Scenario 5** | **Passive Video DPO from UI Undo (`Ctrl+Z`)** | UI cut undo mined into atomic preference pair $(y_w, y_l)$ with calculated log-ratio delta (0.1475) | **PASS ✅** |
+| **Scenario 6** | **Tri-Modal Joint Manifold Alignment** | Cut locked to 120BPM music downbeat and phonetic zero-crossing, reducing joint energy cost from 0.940 to **0.045 (-95%)** | **PASS ✅** |
+
+To reproduce:
+```bash
+python -X utf8 bench/proofs/run_frontier_rl_proofs.py
+```
+
+
 

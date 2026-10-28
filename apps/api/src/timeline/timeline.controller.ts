@@ -56,6 +56,73 @@ export class TimelineController {
     return this.timelineService.getRLState();
   }
 
+  // --- Frontier Problem #09 Extensions ---
+
+  @Get('hazard-attribution')
+  async getHazardAttribution(@Param('assetId') assetId: string) {
+    return this.timelineService.getDenseHazardAttribution(assetId);
+  }
+
+  @Get('causal-lift')
+  async getCausalLift(
+    @Param('assetId') assetId: string,
+    @Query('subscribers') subscribers?: string,
+    @Query('observedRetention') observed?: string
+  ) {
+    return this.timelineService.evaluateCausalTreatment(
+      assetId,
+      observed ? parseFloat(observed) : 78.4,
+      subscribers ? parseInt(subscribers, 10) : 250000
+    );
+  }
+
+  @Get('virtual-audience')
+  async simulateVirtualAudience(@Param('assetId') assetId: string) {
+    return this.timelineService.simulateAudienceTrajectory(assetId);
+  }
+
+  @Post('dpo-undo')
+  async harvestDPOUndo(
+    @Param('assetId') assetId: string,
+    @Body()
+    body: {
+      undoneCut: { timestamp: number; action: string };
+      humanCut: { timestamp: number; action: string };
+      transcriptContext?: string;
+    }
+  ) {
+    return this.timelineService.harvestDPOUndoEvent(
+      assetId,
+      body.undoneCut,
+      body.humanCut,
+      body.transcriptContext || ''
+    );
+  }
+
+  @Get('creator-style')
+  async getCreatorStyle(@Param('assetId') assetId: string) {
+    return this.timelineService.getCreatorStyle(assetId);
+  }
+
+  @Post('protect-span')
+  async protectSpan(
+    @Param('assetId') assetId: string,
+    @Body() body: any
+  ) {
+    return this.timelineService.protectCreativeSpan(assetId, body);
+  }
+
+  @Get('trimodal-cut')
+  async optimizeTriModalCut(
+    @Query('timestamp') timestamp: string,
+    @Query('bpm') bpm?: string
+  ) {
+    return this.timelineService.optimizeCutToTriModalManifold(
+      parseFloat(timestamp || '4.5'),
+      bpm ? parseInt(bpm, 10) : 120
+    );
+  }
+
   // --- Version Control Endpoints (Problem #10) ---
 
   @Get('branches')
