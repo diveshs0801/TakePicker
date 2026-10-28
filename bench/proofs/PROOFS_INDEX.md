@@ -152,3 +152,27 @@ python bench/proofs/run_multi_scenario_proofs.py
 
 All ground-truth proof videos are saved in [bench/proofs/videos/](file:///c:/Divesh/TakePicker/bench/proofs/videos/).  
 The structured JSON results matrix is in [bench/proofs/verification_proof_matrix.json](file:///c:/Divesh/TakePicker/bench/proofs/verification_proof_matrix.json).
+
+---
+
+## 5. Cardboard AI Problem #10: Version Control & 3-Way Timeline Merge Matrix
+
+> **Harness:** [`bench/proofs/run_version_control_proofs.py`](file:///c:/Divesh/TakePicker/bench/proofs/run_version_control_proofs.py)  
+> **Proof Matrix:** [`bench/proofs/version_control_proof_matrix.json`](file:///c:/Divesh/TakePicker/bench/proofs/version_control_proof_matrix.json)  
+> **Architecture Spec:** [`docs/CARDBOARD_AI_PROBLEM_10_VERSION_CONTROL.md`](file:///c:/Divesh/TakePicker/docs/CARDBOARD_AI_PROBLEM_10_VERSION_CONTROL.md)  
+> **Pass Rate:** **100.0% across all 6 forensic scenarios**
+
+| Proof Scenario | Real-World Collaboration Workflow | Result | Latency / Throughput |
+|:---|:---|:---|:---|
+| **Scenario 1** | **Multi-Editor Orthogonal Roles**: Lead Editor trims dialogue on V1; Sound Designer levels audio gain & adds B-roll on V2/A1 | **PASS ✅ (100% Clean Auto-Merge)** | 0.82 ms (0 conflicts) |
+| **Scenario 2** | **Parallel Chapter / Scene Editing**: Editor A cuts Scene 1 while Editor B cuts Scene 2 (Longest Increasing Subsequence ordering) | **PASS ✅ (Clean Chapter Merge)** | 0.94 ms (0 conflicts) |
+| **Scenario 3** | **`TRIM_TRIM` Collision & Audition Lanes**: Contradictory boundary trims resolved via non-destructive stacked tracks (V1 / V2) | **PASS ✅ (Audition Lanes Resolved)** | 1.15 ms (2 stacked takes) |
+| **Scenario 4** | **`DELETE_EDIT` Collision**: AI take pruning vs. human color grade detected without silent clobbering | **PASS ✅ (Collision Safely Caught)** | 0.76 ms (Actionable prompt) |
+| **Scenario 5** | **Mathematical Commutativity Proof**: $\text{merge}(B, X, Y) \equiv \text{merge}(B, Y, X)$ evaluated across 250 randomized trials | **PASS ✅ (250/250 = 100.0%)** | 100% Invariant Symmetry |
+| **Scenario 6** | **Scale & Latency Benchmark**: Diff and merge across 100 to 10,000 clips | **PASS ✅ (56,615 clips/sec)** | 1.77 ms (100) / 37.58 ms (1k) |
+
+To reproduce:
+```bash
+python bench/proofs/run_version_control_proofs.py
+```
+

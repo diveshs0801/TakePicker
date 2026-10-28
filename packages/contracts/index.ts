@@ -55,6 +55,11 @@ export interface TimelineClip {
   groupId: string | null;
   reason?: string;     // e.g. "take 3/3, score 0.91"
   text?: string;
+  trackId?: string;    // e.g. "V1", "V2", "A1", "A2"
+  gain?: number;       // linear audio gain (1.0 = 0dB, default 1.0)
+  speed?: number;      // playback rate (1.0 = normal, default 1.0)
+  colorTag?: string;   // visual color badge
+  auditionGroup?: string; // Links alternative takes in a stacked audition lane
 }
 
 export interface Timeline {
@@ -417,3 +422,111 @@ export interface TimelineLintReport {
     explanation: string;
   }>;
 }
+
+// ============================================================================
+// Cardboard AI Hard Problem #10: Version Control for Video
+// Branching, 3-Way Timeline Merge, Conflict Taxonomy & Audition Resolution
+// ============================================================================
+
+export type TimelineDiffOpType =
+  | 'TRIM'
+  | 'SLIP'
+  | 'MOVE'
+  | 'INSERT'
+  | 'DELETE'
+  | 'FIELD_EDIT';
+
+export interface TimelineDiffOp {
+  opType: TimelineDiffOpType;
+  clipId: string;
+  trackId?: string;
+  oldValues?: Partial<TimelineClip>;
+  newValues?: Partial<TimelineClip>;
+  afterClipId?: string | null;  // For MOVE or INSERT relative sequence placement
+  reason?: string;
+}
+
+export interface TimelinePatch {
+  baseAssetId: string;
+  baseHash: string;
+  targetHash: string;
+  operations: TimelineDiffOp[];
+  createdAt: string;
+}
+
+export type TimelineConflictType =
+  | 'TRIM_TRIM'             // Both sides trimmed same clip boundaries with contradictory values
+  | 'DELETE_EDIT'           // One side deleted clip, other side trimmed/color/volume-edited it
+  | 'MOVE_MOVE'             // Both sides moved clip to contradictory positions or tracks
+  | 'TRACK_OCCLUSION'       // Two new clips inserted into overlapping presentation times on same track
+  | 'SEMANTIC_VIOLATION';   // Merged clip violates physical invariants (in >= out or duration < 1 frame)
+
+export type ConflictResolutionStrategy =
+  | 'KEEP_OURS'             // Accept current/active branch version
+  | 'KEEP_THEIRS'           // Accept incoming/target branch version
+  | 'SPLIT_AUDITION_LANES'  // Non-destructive: retain both clips as stacked audition layers
+  | 'BLEND_FIELDWISE';      // Auto-combine orthogonal property changes (e.g. ours trim + theirs gain)
+
+export interface TimelineConflict {
+  id: string;
+  type: TimelineConflictType;
+  clipId: string;
+  description: string;
+  baseClip?: TimelineClip;
+  oursClip?: TimelineClip;
+  theirsClip?: TimelineClip;
+  conflictingField?: string;
+  recommendedStrategy: ConflictResolutionStrategy;
+  resolved?: boolean;
+  chosenStrategy?: ConflictResolutionStrategy;
+}
+
+export interface TimelineBranch {
+  id: string;
+  name: string;               // e.g. "main", "sarah/dialogue-pacing", "alex/sound-design", "agent/auto-tighten"
+  assetId: string;
+  headRevisionId: string;
+  baseRevisionId: string;
+  author: string;             // User name or "agent"
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  isProtected?: boolean;      // True for 'main'
+}
+
+export interface TimelineRevision {
+  id: string;
+  branchId: string;
+  parentRevisionIds: string[]; // 1 parent for standard commit, 2 parents for 3-way merge
+  author: string;
+  message: string;             // Human-readable editorial milestone message
+  timestamp: string;
+  timelineHash: string;        // Merkle tree root hash of timeline
+  timelineSnapshot: Timeline;  // Materialized snapshot
+  patchFromParent?: TimelineDiffOp[];
+}
+
+export interface ThreeWayMergeResult {
+  baseRevisionId?: string;
+  oursBranch: string;
+  theirsBranch: string;
+  mergedTimeline: Timeline;
+  hasConflicts: boolean;
+  conflicts: TimelineConflict[];
+  appliedOpsCount: number;
+  autoResolvedCount: number;
+  stats: {
+    totalClips: number;
+    cleanMergesCount: number;
+    conflictCount: number;
+    durationSeconds: number;
+  };
+}
+
+export interface VersionControlState {
+  currentBranch: string;
+  branches: TimelineBranch[];
+  revisions: TimelineRevision[];
+  activeConflicts: TimelineConflict[];
+}
+

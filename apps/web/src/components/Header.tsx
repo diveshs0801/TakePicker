@@ -17,7 +17,9 @@ import {
   Undo2,
   Redo2,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  GitBranch,
+  GitMerge,
 } from 'lucide-react';
 import type { Asset } from '../../../../packages/contracts';
 
@@ -34,6 +36,9 @@ interface HeaderProps {
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  currentBranch?: string;
+  onOpenMergeModal?: () => void;
+  onBranchChange?: (branch: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -49,6 +54,9 @@ export const Header: React.FC<HeaderProps> = ({
   onRedo,
   canUndo = false,
   canRedo = false,
+  currentBranch = 'main',
+  onOpenMergeModal,
+  onBranchChange,
 }) => {
   return (
     <header style={{
@@ -266,6 +274,73 @@ export const Header: React.FC<HeaderProps> = ({
           <span className={`badge ${currentAsset.status === 'READY' ? 'badge-green' : 'badge-amber'}`} style={{ fontSize: '0.68rem', padding: '1px 6px' }}>
             {currentAsset.status}
           </span>
+        </div>
+      )}
+
+      {/* Cardboard AI Problem #10: Version Control & Cut Selector */}
+      {currentAsset && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.28)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '3px 8px',
+            fontSize: '0.74rem',
+            color: '#c7d2fe',
+          }}>
+            <GitBranch size={13} color="#818cf8" />
+            <select
+              value={currentBranch}
+              onChange={(e) => onBranchChange?.(e.target.value)}
+              title="Switch Cut / Version Branch"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.74rem',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="main" style={{ background: '#0c0f1d' }}>🌿 main (Master Cut)</option>
+              <option value="sarah/pacing" style={{ background: '#0c0f1d' }}>🌿 sarah/pacing (Lead Cut)</option>
+              <option value="alex/sound-design" style={{ background: '#0c0f1d' }}>🌿 alex/sound-design (B-Roll Cut)</option>
+              <option value="agent/auto-tighten" style={{ background: '#0c0f1d' }}>🌿 agent/auto-tighten (AI Pacing)</option>
+            </select>
+          </div>
+
+          {onOpenMergeModal && (
+            <button
+              type="button"
+              onClick={onOpenMergeModal}
+              title="Cardboard AI Problem #10: 3-Way Timeline Merge & Audition Resolver"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+                border: '1px solid rgba(168, 85, 247, 0.35)',
+                color: '#e0e7ff',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <GitMerge size={12} color="#c084fc" />
+              <span>Review & Merge</span>
+            </button>
+          )}
         </div>
       )}
 

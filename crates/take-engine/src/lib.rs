@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod merge;
 pub mod video;
 
 pub use audio::{
@@ -6,6 +7,12 @@ pub use audio::{
     VadConfig, WaveformBucket, WaveformResult,
 };
 
+pub use merge::{
+    longest_increasing_subsequence, three_way_merge, Clip, ConflictType, ResolutionStrategy,
+    ThreeWayMergeResult, Timeline, TimelineConflict,
+};
+
 pub use video::{
     GopSubSegment, SegmentExecutionStrategy, SmartGopPlan, VideoKeyframeIndex,
 };
+

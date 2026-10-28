@@ -1,0 +1,95 @@
+{
+  "benchmarkName": "Cardboard AI Problem #10: Version Control & 3-Way Timeline Merge Matrix",
+  "timestamp": "2026-10-28 09:56:28 UTC",
+  "author": "Antigravity Staff Engineer",
+  "scenarios": [
+    {
+      "scenarioId": "SCENARIO_1_ORTHOGONAL_ROLE_MERGE",
+      "description": "Lead dialogue editor trims dialogue while sound designer levels audio and inserts B-roll overlay",
+      "branches": [
+        "sarah/pacing",
+        "alex/sound-design"
+      ],
+      "expectedConflicts": 0,
+      "actualConflicts": 0,
+      "cleanAutoMerge": true,
+      "proofVerification": "Preserved both Sarah's dialogue trims and Alex's audio leveling + B-roll with 0 conflicts"
+    },
+    {
+      "scenarioId": "SCENARIO_2_PARALLEL_CHAPTER_EDITING",
+      "description": "Editor A modifies Scene 1 while Editor B modifies Scene 2 in parallel",
+      "branches": [
+        "editorA/scene1",
+        "editorB/scene2"
+      ],
+      "expectedConflicts": 0,
+      "actualConflicts": 0,
+      "cleanAutoMerge": true,
+      "proofVerification": "Successfully applied disjoint chapter edits and preserved sequence order"
+    },
+    {
+      "scenarioId": "SCENARIO_3_TRIM_TRIM_AUDITION_LANES",
+      "description": "Contradictory boundary trims on same clip resolved via non-destructive stacked Audition Lanes",
+      "branches": [
+        "sarah/tight-hook",
+        "alex/extended-music"
+      ],
+      "expectedConflicts": 1,
+      "actualConflicts": 1,
+      "auditionLanesCreated": 2,
+      "cleanAutoMerge": true,
+      "proofVerification": "Generated dual stacked takes on Track V1/V2 with audition group linking"
+    },
+    {
+      "scenarioId": "SCENARIO_4_DELETE_EDIT_COLLISION",
+      "description": "Agent deletes aborted take while human editor graded and trimmed it",
+      "branches": [
+        "agent/cleanup",
+        "user/grading"
+      ],
+      "expectedConflicts": 1,
+      "actualConflicts": 1,
+      "cleanAutoMerge": true,
+      "proofVerification": "Flagged DELETE_EDIT conflict without silent clobbering or data loss"
+    },
+    {
+      "scenarioId": "SCENARIO_5_MATHEMATICAL_COMMUTATIVITY",
+      "description": "Evaluated merge(B, X, Y) == merge(B, Y, X) symmetry across randomized trials",
+      "totalTrials": 250,
+      "passedTrials": 250,
+      "passRatePct": 100.0,
+      "cleanAutoMerge": true,
+      "proofVerification": "100.0% commutative symmetry proven: branch evaluation order does not alter output"
+    }
+  ],
+  "scaleBenchmarks": [
+    {
+      "clipCount": 100,
+      "elapsedMs": 1.77,
+      "throughputClipsPerSec": 56615,
+      "appliedOps": 100,
+      "conflicts": 0
+    },
+    {
+      "clipCount": 1000,
+      "elapsedMs": 37.58,
+      "throughputClipsPerSec": 26607,
+      "appliedOps": 1000,
+      "conflicts": 0
+    },
+    {
+      "clipCount": 5000,
+      "elapsedMs": 649.16,
+      "throughputClipsPerSec": 7702,
+      "appliedOps": 5000,
+      "conflicts": 0
+    },
+    {
+      "clipCount": 10000,
+      "elapsedMs": 2387.87,
+      "throughputClipsPerSec": 4187,
+      "appliedOps": 10000,
+      "conflicts": 0
+    }
+  ]
+}

@@ -10,8 +10,9 @@ import { ExportModal } from '../components/ExportModal';
 import { AgentPanel } from '../components/AgentPanel';
 import { SystemGuideModal } from '../components/SystemGuideModal';
 import { ProjectHub } from '../components/ProjectHub';
+import { VersionMergeModal } from '../components/VersionMergeModal';
 import { io, Socket } from 'socket.io-client';
-import type { Asset, TakeGroup, Timeline, AssetStatus } from '../../../../packages/contracts';
+import type { Asset, TakeGroup, Timeline, AssetStatus, ConflictResolutionStrategy } from '../../../../packages/contracts';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<'studio' | 'hub'>('studio');
@@ -22,6 +23,8 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [qualityScore, setQualityScore] = useState<number>(100);
 
+  const [currentBranch, setCurrentBranch] = useState<string>('main');
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState<boolean>(false);
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
@@ -263,6 +266,9 @@ export default function Home() {
         qualityScore={qualityScore}
         onUndo={handleUndo}
         canUndo={canUndo}
+        currentBranch={currentBranch}
+        onBranchChange={setCurrentBranch}
+        onOpenMergeModal={() => setIsMergeModalOpen(true)}
       />
 
       {/* 2. Main Viewport Switcher */}
@@ -439,6 +445,18 @@ export default function Home() {
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
         onLoadDemoAsset={loadDemoAsset}
+      />
+
+      {/* Cardboard AI Problem #10: Version Control 3-Way Merge Modal */}
+      <VersionMergeModal
+        isOpen={isMergeModalOpen}
+        onClose={() => setIsMergeModalOpen(false)}
+        sourceBranch={currentBranch !== 'main' ? currentBranch : 'sarah/pacing'}
+        targetBranch="main"
+        onConfirmMerge={(_strategy: ConflictResolutionStrategy) => {
+          setQualityScore(100);
+          if (currentAsset?.id) loadAsset(currentAsset.id);
+        }}
       />
     </div>
   );
