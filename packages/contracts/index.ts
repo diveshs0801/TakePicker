@@ -535,3 +535,89 @@ export interface VersionControlState {
   activeConflicts: TimelineConflict[];
 }
 
+// =========================================================================
+// Cardboard AI Problem #09: Aesthetic VLM Judge, Brand Kit & Social RL Loop
+// =========================================================================
+
+export interface BrandKitConfig {
+  id: string;
+  name: string;
+  primaryColor: string;     // e.g. '#6366f1' (indigo)
+  accentColor: string;      // e.g. '#a855f7' (purple)
+  fontFamily: string;       // e.g. 'Inter', 'Outfit'
+  safeZone: {
+    topPct: number;         // Top margin (default: 14% to avoid mobile app headers)
+    bottomPct: number;      // Bottom margin (default: 20% to avoid caption & audio tags)
+    rightPct: number;       // Right margin (default: 18% to avoid engagement buttons)
+  };
+  targetPacingWpmMin: number;
+  targetPacingWpmMax: number;
+  maxShotDurationSec: number;
+}
+
+export type AestheticFindingType =
+  | 'VISUAL_JUMP_CUT'           // Sub-30 degree camera angle change with identical subject position
+  | 'SAFE_ZONE_VIOLATION'       // Text/overlay clipped by TikTok / Instagram Reels UI icons
+  | 'BRAND_COLOR_DIVERGENCE'    // Primary color tone diverges significantly from brand kit palette
+  | 'PACING_DISSONANCE'         // Sudden pacing shift without narrative justification
+  | 'NARRATIVE_SETUP_MISSING';  // Hook or punchline disconnected from premise
+
+export interface AestheticFinding {
+  id: string;
+  type: AestheticFindingType;
+  severity: 'warn' | 'error';
+  timestamp: number;
+  clipId?: string;
+  message: string;
+  details?: Record<string, any>;
+  suggestedAction: string;
+}
+
+export interface AestheticQualityReport {
+  overallTasteScore: number;     // 0 - 100
+  brandAdherenceScore: number;   // 0 - 100
+  narrativeArcScore: number;     // 0 - 100
+  visualContinuityScore: number; // 0 - 100
+  findings: AestheticFinding[];
+  vlmCritique?: string;
+  vlmModelUsed?: string;
+  tokenBudgetStats: {
+    tokensUsed: number;
+    tokensRemainingMinute: number;
+    cacheHit: boolean;
+  };
+  createdAt: string;
+}
+
+export interface SocialRetentionTelemetry {
+  assetId: string;
+  platform: 'tiktok' | 'youtube_shorts' | 'instagram_reels';
+  sampleCount: number;
+  retentionTrajectory: { second: number; retentionPct: number }[];
+  threeSecondHookRate: number;   // e.g. 91.5%
+  completionRate: number;        // e.g. 64.2%
+  observedDropOffCliffs: {
+    timestamp: number;
+    dropMagnitudePct: number;
+    defectCorrelation?: string;
+  }[];
+}
+
+export interface VideoRLEnvironmentState {
+  iteration: number;
+  policyParameters: {
+    pacingPatience: number;      // Higher = allows longer thoughtful shots; lower = tighter cuts
+    hookDensity: number;         // Aggressiveness of opening 3s hook tightening
+    brollInsertionRate: number;  // Target cuts/minute for visual relief
+    pauseThresholdSec: number;   // Max permissible acoustic pause
+  };
+  rewardMetrics: {
+    empiricalRetentionReward: number; // From social telemetry (0 to 1)
+    antiBrainRotPenalty: number;     // Regularization penalty against epileptic hyper-cuts
+    netTasteReward: number;          // Final combined reward
+  };
+  status: 'OPTIMIZING' | 'STABILIZED' | 'REGULARIZED';
+  history: { iteration: number; reward: number; retentionLiftPct: number }[];
+}
+
+

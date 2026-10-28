@@ -19,6 +19,10 @@ import {
   SilenceDetectionOptions,
   SilenceRemovalResult,
   TimelineLintReport,
+  AestheticQualityReport,
+  BrandKitConfig,
+  SocialRetentionTelemetry,
+  VideoRLEnvironmentState,
 } from '../../../../packages/contracts';
 import {
   applyOperation,
@@ -33,6 +37,8 @@ import {
 } from './timeline.invariants';
 import { detectSilences, generateJumpCutTimeline } from './silence.detector';
 import { TimelineLinter } from './timeline.linter';
+import { AestheticJudge } from './aesthetic.judge';
+import { EngagementRLEngine } from './engagement-rl.engine';
 import { randomUUID } from 'node:crypto';
 
 export class StructuredOpException extends BadRequestException {
@@ -656,6 +662,71 @@ export class TimelineService {
       timeline: finalTimeline,
       report: finalReport,
     };
+  }
+
+  private readonly aestheticJudge = new AestheticJudge();
+  private readonly rlEngine = new EngagementRLEngine();
+
+  /**
+   * Evaluates visual aesthetics, brand kit adherence, and narrative arc using
+   * local CV heuristics and token-budgeted Groq critic.
+   */
+  async evaluateAesthetics(
+    assetId: string,
+    brandKit?: BrandKitConfig
+  ): Promise<AestheticQualityReport> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    let words: any[] = [];
+    try {
+      const transcript = await this.assetsService.getTranscript(assetId);
+      words = transcript?.words || [];
+    } catch {
+      words = [];
+    }
+
+    const report = await this.aestheticJudge.evaluate(timeline, {
+      brandKit,
+      words,
+      aspectRatio: '9:16',
+      groqApiKey: process.env.GROQ_API_KEY,
+      groqModel: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
+    });
+
+    this.wsGateway.emitToAsset(assetId, 'timeline:aesthetic_report', {
+      assetId,
+      report,
+    });
+
+    return report;
+  }
+
+  /**
+   * Ingests social engagement curves and updates the agent's editing policy in the RL environment.
+   */
+  async processEngagementTelemetry(
+    assetId: string,
+    platform: 'tiktok' | 'youtube_shorts' | 'instagram_reels' = 'tiktok'
+  ): Promise<{ telemetry: SocialRetentionTelemetry; updatedRLState: VideoRLEnvironmentState }> {
+    const { timeline } = await this.getTimelineAt(assetId);
+    const result = this.rlEngine.processTelemetry(timeline, {
+      assetId,
+      platform,
+      views: 12500,
+    });
+
+    this.wsGateway.emitToAsset(assetId, 'timeline:rl_telemetry_updated', {
+      assetId,
+      ...result,
+    });
+
+    return result;
+  }
+
+  /**
+   * Returns current Video RL Environment state (policy weights, anti-brain-rot penalty, reward).
+   */
+  getRLState(): VideoRLEnvironmentState {
+    return this.rlEngine.getRLState();
   }
 }
 

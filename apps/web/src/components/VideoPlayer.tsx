@@ -14,7 +14,9 @@ import {
   Grid,
   Radio,
   SlidersHorizontal,
-  Compass
+  Compass,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
 
 export interface VideoPlayerRef {
@@ -39,6 +41,8 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const [playbackRate, setPlaybackRate] = useState<number>(1.0);
     const [showSafeGuides, setShowSafeGuides] = useState(false);
     const [isLooping, setIsLooping] = useState(false);
+    const [auditionMode, setAuditionMode] = useState<'off' | 'take_a' | 'take_b' | 'split'>('off');
+    const [committedTake, setCommittedTake] = useState<'take_a' | 'take_b' | null>(null);
 
     useImperativeHandle(ref, () => ({
       seekTo: (time: number) => {
@@ -226,6 +230,117 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             </div>
           )}
 
+          {/* A/B Audition Lanes Monitor Overlay (Cardboard AI Problem #10) */}
+          {auditionMode !== 'off' && (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 9 }}>
+              {/* Split screen vertical wipe divider */}
+              {auditionMode === 'split' && (
+                <>
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: '50%',
+                    width: '2px',
+                    backgroundColor: '#f8fafc',
+                    boxShadow: '0 0 10px rgba(255,255,255,0.8)',
+                  }} />
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #475569',
+                    borderRadius: '12px',
+                    padding: '2px 8px',
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    color: '#e2e8f0',
+                    letterSpacing: '0.05em',
+                  }}>
+                    A ╎ B
+                  </div>
+                  {/* Left Label */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '50px',
+                    left: '16px',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    background: 'rgba(59, 130, 246, 0.85)',
+                    backdropFilter: 'blur(4px)',
+                    color: '#ffffff',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                  }}>
+                    TAKE A (V1: Sarah Cut)
+                  </div>
+                  {/* Right Label */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '50px',
+                    right: '16px',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    background: 'rgba(168, 85, 247, 0.85)',
+                    backdropFilter: 'blur(4px)',
+                    color: '#ffffff',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                  }}>
+                    TAKE B (V2: Alex Cut)
+                  </div>
+                </>
+              )}
+
+              {/* Single Take Badges */}
+              {auditionMode === 'take_a' && (
+                <div style={{
+                  position: 'absolute',
+                  top: '48px',
+                  left: '14px',
+                  padding: '4px 10px',
+                  borderRadius: '5px',
+                  background: 'rgba(59, 130, 246, 0.90)',
+                  border: '1px solid #60a5fa',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                  color: '#ffffff',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff' }} />
+                  <span>AUDITIONING: TAKE A (Sarah Dialogue Cut)</span>
+                </div>
+              )}
+
+              {auditionMode === 'take_b' && (
+                <div style={{
+                  position: 'absolute',
+                  top: '48px',
+                  left: '14px',
+                  padding: '4px 10px',
+                  borderRadius: '5px',
+                  background: 'rgba(168, 85, 247, 0.90)',
+                  border: '1px solid #c084fc',
+                  boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)',
+                  color: '#ffffff',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff' }} />
+                  <span>AUDITIONING: TAKE B (Alex Sound Cut)</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Top HUD Bar */}
           <div style={{
             position: 'absolute',
@@ -268,6 +383,67 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
             {/* Monitor Settings & Format Badges */}
             <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* A/B Audition Switcher Button */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: 'rgba(9, 11, 16, 0.85)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '2px',
+                gap: '2px',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setAuditionMode(auditionMode === 'off' ? 'take_a' : auditionMode === 'take_a' ? 'take_b' : auditionMode === 'take_b' ? 'split' : 'off')}
+                  title="Toggle A/B Audition Monitor for 3-Way Conflict Lanes"
+                  style={{
+                    background: auditionMode !== 'off' ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                    border: 'none',
+                    color: auditionMode !== 'off' ? '#a5b4fc' : 'var(--text-muted)',
+                    borderRadius: '3px',
+                    padding: '3px 7px',
+                    fontSize: '0.70rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Layers size={12} color={auditionMode !== 'off' ? '#818cf8' : undefined} />
+                  <span>{auditionMode === 'off' ? 'Audition' : auditionMode.toUpperCase()}</span>
+                </button>
+
+                {auditionMode !== 'off' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCommittedTake(auditionMode === 'take_b' ? 'take_b' : 'take_a');
+                      setTimeout(() => setAuditionMode('off'), 800);
+                    }}
+                    title="1-Click Commit Active Audition Cut to Master Timeline"
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.25)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      color: '#34d399',
+                      borderRadius: '3px',
+                      padding: '3px 6px',
+                      fontSize: '0.66rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <CheckCircle2 size={11} />
+                    <span>Commit</span>
+                  </button>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => setShowSafeGuides(!showSafeGuides)}
