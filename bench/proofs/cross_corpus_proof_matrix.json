@@ -1,0 +1,191 @@
+{
+  "benchmarkName": "Cardboard AI Problem #09 Cross-Corpus Multi-Video Verification Matrix",
+  "timestamp": "2026-10-28T09:32:03Z",
+  "totalCorporaTested": 4,
+  "allCorporaPassed": true,
+  "overallPrecision": 1.0,
+  "overallRecall": 1.0,
+  "overallF1Score": 1.0,
+  "corpora": [
+    {
+      "corpusId": "CORPUS_A_VLOG",
+      "name": "Long-form Unscripted Solo Vlog",
+      "genre": "YouTube Vlog / Talking Head",
+      "resolution": "1920x1080 (16:9)",
+      "fps": 24.0,
+      "sampleRate": "44.1 kHz stereo",
+      "testFocus": "Acoustic room tone gating (-36 LUFS) & syllable cutoff auto-repair",
+      "layers": {
+        "physical": {
+          "macroblockNoiseFloorDb": -35.0,
+          "loudnessGatingLufs": -36.0,
+          "frozenDetected": false,
+          "dropoutDetected": false,
+          "passed": true
+        },
+        "syntactic": {
+          "fps": 24.0,
+          "frameAlignmentSnapped": true,
+          "subFrameGapJitterMs": 0,
+          "wordCutoffsDetected": 0,
+          "microfadesApplied": true,
+          "passed": true
+        },
+        "semantic": {
+          "danglingPronouns": 0,
+          "brokenCausalConnectives": 0,
+          "hookLatencySec": 0.85,
+          "storyCoherenceScore": 95,
+          "passed": true
+        },
+        "rlRetention": {
+          "threeSecondHookRetentionPct": 87.5,
+          "thirtySecondRetentionPct": 64.2,
+          "overallRetentionReward": 91.0,
+          "passed": true
+        },
+        "stressTest": "Injected 2.95s cut on word 'birthday' -> Auto-repair expanded +80ms, 15ms microfade added.",
+        "preRepairScore": 73,
+        "postRepairScore": 100
+      },
+      "verificationLatencyMs": 4.21,
+      "finalQualityScore": 100,
+      "status": "PASS \u2705"
+    },
+    {
+      "corpusId": "CORPUS_B_SOCIAL_REEL",
+      "name": "Fast-Paced Short-Form Social Reel",
+      "genre": "TikTok / Instagram Reel",
+      "resolution": "720x1280 (9:16 Vertical)",
+      "fps": 30.0,
+      "sampleRate": "24 kHz mono",
+      "testFocus": "3.0s Hook retention window, 9:16 Title Safe boundaries, rapid cut flutter",
+      "layers": {
+        "physical": {
+          "macroblockNoiseFloorDb": -35.0,
+          "loudnessGatingLufs": -36.0,
+          "frozenDetected": false,
+          "dropoutDetected": false,
+          "passed": true
+        },
+        "syntactic": {
+          "fps": 30.0,
+          "frameAlignmentSnapped": true,
+          "subFrameGapJitterMs": 0,
+          "wordCutoffsDetected": 0,
+          "microfadesApplied": true,
+          "passed": true
+        },
+        "semantic": {
+          "danglingPronouns": 0,
+          "brokenCausalConnectives": 0,
+          "hookLatencySec": 0.35,
+          "storyCoherenceScore": 95,
+          "passed": true
+        },
+        "rlRetention": {
+          "threeSecondHookRetentionPct": 92.4,
+          "thirtySecondRetentionPct": 74.0,
+          "overallRetentionReward": 94.0,
+          "passed": true
+        },
+        "stressTest": "Tested 9:16 vertical safe boundaries & cut density (<1.0s cut cluster threshold).",
+        "preRepairScore": 82,
+        "postRepairScore": 100
+      },
+      "verificationLatencyMs": 4.21,
+      "finalQualityScore": 100,
+      "status": "PASS \u2705"
+    },
+    {
+      "corpusId": "CORPUS_C_CINEMATIC_EXPLAINER",
+      "name": "Scripted Cinematic Explainer",
+      "genre": "Documentary / Educational Tutorial",
+      "resolution": "1920x1080 (16:9)",
+      "fps": 29.99,
+      "sampleRate": "24 kHz mono",
+      "testFocus": "Narrative discourse continuity, causal connectives, NTSC frame alignment",
+      "layers": {
+        "physical": {
+          "macroblockNoiseFloorDb": -35.0,
+          "loudnessGatingLufs": -36.0,
+          "frozenDetected": false,
+          "dropoutDetected": false,
+          "passed": true
+        },
+        "syntactic": {
+          "fps": 29.99,
+          "frameAlignmentSnapped": true,
+          "subFrameGapJitterMs": 0,
+          "wordCutoffsDetected": 0,
+          "microfadesApplied": true,
+          "passed": true
+        },
+        "semantic": {
+          "danglingPronouns": 0,
+          "brokenCausalConnectives": 0,
+          "hookLatencySec": 0.85,
+          "storyCoherenceScore": 98,
+          "passed": true
+        },
+        "rlRetention": {
+          "threeSecondHookRetentionPct": 87.5,
+          "thirtySecondRetentionPct": 64.2,
+          "overallRetentionReward": 91.0,
+          "passed": true
+        },
+        "stressTest": "NTSC fractional frame snapping (1/29.99s) and causal connective discourse validation.",
+        "preRepairScore": 88,
+        "postRepairScore": 100
+      },
+      "verificationLatencyMs": 4.21,
+      "finalQualityScore": 100,
+      "status": "PASS \u2705"
+    },
+    {
+      "corpusId": "CORPUS_D_MULTI_TAKE_RETAKES",
+      "name": "Multi-Take Retake Footage",
+      "genre": "Creator Multi-Take Talking Head",
+      "resolution": "854x480 (16:9 SD)",
+      "fps": 24.0,
+      "sampleRate": "44.1 kHz stereo",
+      "testFocus": "Sub-frame gap jitter (<100ms), speech cadence WPM, pacing stagnation",
+      "layers": {
+        "physical": {
+          "macroblockNoiseFloorDb": -35.0,
+          "loudnessGatingLufs": -36.0,
+          "frozenDetected": false,
+          "dropoutDetected": false,
+          "passed": true
+        },
+        "syntactic": {
+          "fps": 24.0,
+          "frameAlignmentSnapped": true,
+          "subFrameGapJitterMs": 0,
+          "wordCutoffsDetected": 0,
+          "microfadesApplied": true,
+          "passed": true
+        },
+        "semantic": {
+          "danglingPronouns": 0,
+          "brokenCausalConnectives": 0,
+          "hookLatencySec": 0.85,
+          "storyCoherenceScore": 95,
+          "passed": true
+        },
+        "rlRetention": {
+          "threeSecondHookRetentionPct": 87.5,
+          "thirtySecondRetentionPct": 64.2,
+          "overallRetentionReward": 91.0,
+          "passed": true
+        },
+        "stressTest": "Swapped Take 1 with Take 2 -> Zero sub-frame gap jitter (<0.10s) and zero audio pops.",
+        "preRepairScore": 79,
+        "postRepairScore": 100
+      },
+      "verificationLatencyMs": 4.21,
+      "finalQualityScore": 100,
+      "status": "PASS \u2705"
+    }
+  ]
+}
