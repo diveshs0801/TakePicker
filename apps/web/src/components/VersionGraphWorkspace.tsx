@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   GitBranch,
   GitMerge,
@@ -19,12 +19,10 @@ import {
   User,
   Film,
   ChevronDown,
-  ChevronRight,
-  Layers,
-  Plus,
   RefreshCw,
   Eye,
   Sliders,
+  RotateCcw,
 } from 'lucide-react';
 
 interface VersionGraphWorkspaceProps {
@@ -40,13 +38,17 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
   onOpenMergeModal,
   onBackToStudio,
 }) => {
-  const [selectedRevisionId, setSelectedRevisionId] = useState<string>('rev_426b');
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string>('rev_11e0');
   const [auditionMode, setAuditionMode] = useState<'after' | 'before' | 'split'>('after');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playbackProgress, setPlaybackProgress] = useState<number>(42);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(18.0);
   const [splitPosition, setSplitPosition] = useState<number>(50);
   const [showBranchMenu, setShowBranchMenu] = useState<boolean>(false);
   const [commitMessageInput, setCommitMessageInput] = useState<string>('');
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const beforeVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const branches = [
     { id: 'b_main', name: 'main', title: 'Master Broadcast Cut', author: 'Lead Director', color: '#10b981' },
@@ -60,17 +62,36 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       id: 'rev_9a41',
       branch: 'main',
       author: 'Lead Director',
-      message: 'Master broadcast baseline (TakePicker v2 ingest)',
+      message: 'Master broadcast baseline (Initial ingest cut)',
       time: '10m ago',
       color: '#10b981',
-      stats: { added: 181, deleted: 0, modified: 0 },
+      videoUrl: '/proofs/proof_main_baseline.mp4',
+      stats: { added: 18, deleted: 0, modified: 0 },
       isMerge: false,
-      summary: 'Initial rough cut created with 181 clips across 24fps frame grid.',
+      summary: 'Initial rough cut created with 18 clips across 23.98fps frame grid. Contains natural dead-air pauses and raw dialogue loudness.',
       diff: {
         hasBroll: false,
         cutDuration: 0,
         audioBoost: 0,
         brollLabel: '',
+      },
+    },
+    {
+      id: 'rev_26ab',
+      branch: 'sarah/pacing',
+      author: 'Sarah (Lead Editor)',
+      message: 'Trim 1.8s dead air pause in Scene 2 hook & snap to 24fps',
+      time: '35m ago',
+      color: '#6366f1',
+      videoUrl: '/proofs/proof_sarah_pacing.mp4',
+      stats: { added: 0, deleted: 4, modified: 12 },
+      isMerge: false,
+      summary: 'Pruned dead air pauses longer than 0.5s. Tightened Scene 2 speech from 9.2s to 7.4s, eliminating retention drop cliff while keeping acoustic rhythm.',
+      diff: {
+        hasBroll: false,
+        brollLabel: '',
+        cutDuration: 1.8,
+        audioBoost: 0,
       },
     },
     {
@@ -80,6 +101,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       message: 'Level dialogue loudness (-23 LUFS) & add riser SFX',
       time: '18m ago',
       color: '#a855f7',
+      videoUrl: '/proofs/proof_alex_sound_broll.mp4',
       stats: { added: 4, deleted: 0, modified: 3 },
       isMerge: false,
       summary: 'Normalized dialogue to -23 LUFS (EBU R128), added 4 atmospheric riser sound effects on Track A2, and overlayed silicon architecture B-roll on Track V2.',
@@ -91,42 +113,84 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       },
     },
     {
-      id: 'rev_26ab',
-      branch: 'sarah/pacing',
-      author: 'Sarah (Lead Editor)',
-      message: 'Trim 1.2s pause in Scene 2 hook & snap to 24fps',
-      time: '35m ago',
-      color: '#6366f1',
-      stats: { added: 0, deleted: 4, modified: 12 },
-      isMerge: false,
-      summary: 'Pruned dead air pauses longer than 0.6s. Tightened Scene 2 speech from 8.7s to 7.5s, snapping cut boundaries to the frame grid.',
-      diff: {
-        hasBroll: false,
-        brollLabel: '',
-        cutDuration: 1.2,
-        audioBoost: 0,
-      },
-    },
-    {
       id: 'rev_11e0',
       branch: 'agent/auto-tighten',
       author: 'TakePicker AI Agent',
-      message: 'Auto-prune 4 dead air intervals + 15ms microfades',
-      time: '1h ago',
+      message: '3-Way Merge: Combine Sarah pacing + Alex audio/B-roll',
+      time: 'Just now',
       color: '#f59e0b',
-      stats: { added: 4, deleted: 8, modified: 18 },
+      videoUrl: '/proofs/proof_agent_merged_master.mp4',
+      stats: { added: 4, deleted: 4, modified: 18 },
       isMerge: true,
-      summary: 'Collaborative 3-way merge: auto-combined Sarah’s pacing trims with Alex’s audio stems, resolving Scene 2 conflict non-destructively via Audition Lanes.',
+      summary: 'Non-destructive 3-way merge: auto-reconciled Sarah’s tightened cut boundaries with Alex’s audio stems and B-roll cutaway, resolving Scene 2 conflict via Audition Lanes and 15ms microfades.',
       diff: {
         hasBroll: true,
-        brollLabel: '✨ +3.0s B-Roll Cutaway (silicon_arch_reel.mp4)',
-        cutDuration: 1.2,
+        brollLabel: '🔀 3-Way Merged: B-Roll + Tight Pacing + Microfades',
+        cutDuration: 1.8,
         audioBoost: 3.2,
       },
     },
   ];
 
-  const selectedRev = revisions.find((r) => r.id === selectedRevisionId) || revisions[1];
+  const selectedRev = revisions.find((r) => r.id === selectedRevisionId) || revisions[3];
+
+  // Active video source based on Audition Mode
+  const currentVideoSrc =
+    auditionMode === 'before'
+      ? '/proofs/1_full_defects_showcase.mp4'
+      : selectedRev.videoUrl;
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        if (beforeVideoRef.current) beforeVideoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        videoRef.current.play().catch(() => {});
+        if (beforeVideoRef.current) beforeVideoRef.current.play().catch(() => {});
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+      if (videoRef.current.duration) {
+        setDuration(videoRef.current.duration);
+      }
+    }
+  };
+
+  const handleSeek = (newTime: number) => {
+    setCurrentTime(newTime);
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime;
+    }
+    if (beforeVideoRef.current) {
+      beforeVideoRef.current.currentTime = newTime;
+    }
+  };
+
+  // Handle keyboard spacebar toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && (e.target as HTMLElement).tagName !== 'INPUT') {
+        e.preventDefault();
+        togglePlay();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying]);
+
+  const formatTimecode = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    const frames = Math.floor((seconds % 1) * 24);
+    return `00:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(frames).padStart(2, '0')}`;
+  };
 
   return (
     <div
@@ -276,7 +340,6 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
             <span>CHANGES</span>
           </div>
 
-          {/* Commit Message Textarea */}
           <div
             style={{
               position: 'relative',
@@ -327,7 +390,6 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
             </button>
           </div>
 
-          {/* Blue Commit Button */}
           <div style={{ marginTop: '8px', display: 'flex' }}>
             <button
               type="button"
@@ -430,7 +492,12 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
             return (
               <div
                 key={rev.id}
-                onClick={() => setSelectedRevisionId(rev.id)}
+                onClick={() => {
+                  setSelectedRevisionId(rev.id);
+                  if (videoRef.current) {
+                    videoRef.current.currentTime = 0;
+                  }
+                }}
                 style={{
                   position: 'relative',
                   zIndex: 2,
@@ -461,7 +528,6 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
 
                 {/* Commit Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Row 1: Commit Name + Branch Badge */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span
                       style={{
@@ -478,7 +544,6 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                       {rev.message}
                     </span>
 
-                    {/* Branch Pill (Like Antigravity's blue main badge) */}
                     <span
                       style={{
                         fontSize: '0.58rem',
@@ -495,14 +560,12 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                     </span>
                   </div>
 
-                  {/* Row 2: Who did it & Time */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.65rem', color: '#94a3b8', marginTop: '2px' }}>
                     <span style={{ color: '#cbd5e1', fontWeight: 600 }}>{rev.author}</span>
                     <span>•</span>
                     <span>{rev.time}</span>
                   </div>
 
-                  {/* Row 3: Clip Cuts & Diff Badges */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '5px' }}>
                     {rev.stats.added > 0 && (
                       <span
@@ -558,7 +621,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                           marginLeft: 'auto',
                         }}
                       >
-                        MERGE
+                        3-WAY MERGE
                       </span>
                     )}
                   </div>
@@ -669,7 +732,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
         </div>
 
         {/* =====================================================================
-            UPPER VIEWPORT: BIG VIDEO SEEING SPACE (Cinematic Player)
+            UPPER VIEWPORT: BIG VIDEO SEEING SPACE (Real MP4 Player)
             ===================================================================== */}
         <div
           style={{
@@ -684,20 +747,48 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
-          {/* Simulated Video Canvas / Background Frame */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                auditionMode === 'before'
-                  ? 'radial-gradient(ellipse at center, #1e1b4b 0%, #000000 80%)'
-                  : auditionMode === 'after'
-                  ? 'radial-gradient(ellipse at center, #064e3b 0%, #000000 80%)'
-                  : `linear-gradient(90deg, #1e1b4b 0%, #1e1b4b ${splitPosition}%, #064e3b ${splitPosition}%, #064e3b 100%)`,
-              opacity: 0.95,
-            }}
-          />
+          {/* Real Video Player Element (Playing generated video proof) */}
+          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Main / After Video */}
+            <video
+              ref={videoRef}
+              src={currentVideoSrc}
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={() => setIsPlaying(false)}
+              playsInline
+              style={{
+                maxHeight: '100%',
+                maxWidth: '100%',
+                objectFit: 'contain',
+                position: 'absolute',
+                inset: 0,
+                margin: 'auto',
+                clipPath:
+                  auditionMode === 'split'
+                    ? `polygon(${splitPosition}% 0, 100% 0, 100% 100%, ${splitPosition}% 100%)`
+                    : undefined,
+              }}
+            />
+
+            {/* Split Screen 'Before' Video (defective showcase for side-by-side comparison) */}
+            {auditionMode === 'split' && (
+              <video
+                ref={beforeVideoRef}
+                src="/proofs/1_full_defects_showcase.mp4"
+                playsInline
+                muted
+                style={{
+                  maxHeight: '100%',
+                  maxWidth: '100%',
+                  objectFit: 'contain',
+                  position: 'absolute',
+                  inset: 0,
+                  margin: 'auto',
+                  clipPath: `polygon(0 0, ${splitPosition}% 0, ${splitPosition}% 100%, 0 100%)`,
+                }}
+              />
+            )}
+          </div>
 
           {/* Interactive Split Screen Divider */}
           {auditionMode === 'split' && (
@@ -749,7 +840,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   zIndex: 5,
                   padding: '4px 10px',
                   borderRadius: '5px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.25)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.45)',
                   border: '1px solid #ef4444',
                   color: '#fca5a5',
                   fontSize: '0.70rem',
@@ -757,7 +848,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   letterSpacing: '0.04em',
                 }}
               >
-                A: BEFORE (PRE-EDIT)
+                A: BEFORE (DEFECTIVE RAW)
               </div>
               <div
                 style={{
@@ -767,7 +858,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   zIndex: 5,
                   padding: '4px 10px',
                   borderRadius: '5px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.25)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.45)',
                   border: '1px solid #10b981',
                   color: '#6ee7b7',
                   fontSize: '0.70rem',
@@ -775,28 +866,10 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   letterSpacing: '0.04em',
                 }}
               >
-                B: AFTER (THIS CUT)
+                B: AFTER ({selectedRev.branch.toUpperCase()})
               </div>
             </>
           )}
-
-          {/* Center Video Frame Mockup */}
-          <div style={{ zIndex: 4, textAlign: 'center', pointerEvents: 'none', maxWidth: '600px' }}>
-            <Film
-              size={48}
-              color={auditionMode === 'before' ? '#818cf8' : auditionMode === 'after' ? '#34d399' : '#fbbf24'}
-              style={{ margin: '0 auto 12px' }}
-            />
-            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.02em' }}>
-              {auditionMode === 'before' && '⏪ A: PRE-EDIT BASELINE CUT (UNMODIFIED)'}
-              {auditionMode === 'after' && '⏩ B: REVISED MASTER CUT (THIS COMMIT APPLIED)'}
-              {auditionMode === 'split' && '🔀 A/B REAL-TIME SPLIT SCREEN AUDITION'}
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '6px' }}>
-              Playhead: <code style={{ color: '#38bdf8', fontWeight: 800 }}>00:01:14:08</code> @ 24.000 fps •{' '}
-              <span style={{ color: '#34d399', fontWeight: 700 }}>100/100 Quality Score</span>
-            </div>
-          </div>
 
           {/* Floating Top Controls: Audition Mode Selector */}
           <div
@@ -832,7 +905,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                 transition: 'all 0.12s ease',
               }}
             >
-              A: Before
+              A: Before (Defective)
             </button>
             <button
               type="button"
@@ -849,7 +922,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                 transition: 'all 0.12s ease',
               }}
             >
-              B: After
+              B: After (Committed)
             </button>
             <button
               type="button"
@@ -878,7 +951,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
               left: 0,
               right: 0,
               padding: '12px 24px',
-              background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.9) 100%)',
+              background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.92) 100%)',
               zIndex: 10,
               display: 'flex',
               flexDirection: 'column',
@@ -897,14 +970,14 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
               }}
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
-                const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-                setPlaybackProgress(p);
+                const p = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                handleSeek(p * duration);
               }}
             >
               <div
                 style={{
                   height: '100%',
-                  width: `${playbackProgress}%`,
+                  width: `${(currentTime / (duration || 1)) * 100}%`,
                   backgroundColor: auditionMode === 'before' ? '#ef4444' : '#10b981',
                   borderRadius: '4px',
                 }}
@@ -913,7 +986,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                 style={{
                   position: 'absolute',
                   top: '-4px',
-                  left: `${playbackProgress}%`,
+                  left: `${(currentTime / (duration || 1)) * 100}%`,
                   width: '15px',
                   height: '15px',
                   borderRadius: '50%',
@@ -924,12 +997,12 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
               />
             </div>
 
-            {/* Play Button, Status & Scrubber Info */}
+            {/* Play Button, Timecode & Status */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsPlaying(!isPlaying)}
+                  onClick={togglePlay}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -948,17 +1021,21 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   <span>{isPlaying ? 'Pause' : 'Play Audition'}</span>
                 </button>
 
-                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                  Press <kbd style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 5px', borderRadius: '3px' }}>Space</kbd> to toggle playback
+                <div style={{ fontSize: '0.74rem', color: '#cbd5e1', fontFamily: 'monospace' }}>
+                  <strong style={{ color: '#38bdf8' }}>{formatTimecode(currentTime)}</strong> / {formatTimecode(duration)}
+                </div>
+
+                <span style={{ fontSize: '0.70rem', color: '#94a3b8' }}>
+                  Press <kbd style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 5px', borderRadius: '3px' }}>Space</kbd>
                 </span>
               </div>
 
               <div style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
-                Audition State:{' '}
+                Video Proof:{' '}
                 <strong style={{ color: auditionMode === 'before' ? '#f87171' : '#34d399' }}>
                   {auditionMode === 'before'
-                    ? 'Original uncut pacing (Raw audio)'
-                    : '15ms microfades applied • Loudness leveled to -23 LUFS'}
+                    ? '1_full_defects_showcase.mp4 (8 Injected Linter Defects)'
+                    : selectedRev.videoUrl.replace('/proofs/', '')}
                 </strong>
               </div>
             </div>
@@ -1080,7 +1157,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   </div>
                 ) : (
                   <span style={{ fontSize: '0.64rem', color: '#475569', fontStyle: 'italic', paddingLeft: '8px' }}>
-                    No overlay changes on this track
+                    No overlay changes on this track (A-Roll primary only)
                   </span>
                 )}
               </div>
@@ -1117,7 +1194,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                     color: '#c7d2fe',
                   }}
                 >
-                  Scene 1 (Intro 5.0s)
+                  Scene 1 (Intro Hook 4.0s)
                 </div>
 
                 <div
@@ -1135,7 +1212,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                     fontWeight: 700,
                   }}
                 >
-                  Scene 2 (Tightened Dialogue 7.5s)
+                  Scene 2 (Tightened Dialogue 7.4s)
                 </div>
 
                 {selectedRev.diff.cutDuration > 0 && (
@@ -1175,7 +1252,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                     color: '#c7d2fe',
                   }}
                 >
-                  Scene 3 (Climax 8.0s)
+                  Scene 3 (Architecture 6.1s)
                 </div>
               </div>
             </div>
