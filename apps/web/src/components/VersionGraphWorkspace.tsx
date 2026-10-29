@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import {
   GitBranch,
   GitMerge,
+  GitCommit,
+  MoreHorizontal,
   Play,
   Pause,
   SlidersHorizontal,
@@ -11,10 +13,18 @@ import {
   Scissors,
   Sparkles,
   ArrowRight,
+  Check,
   CheckCircle2,
   Clock,
   User,
   Film,
+  ChevronDown,
+  ChevronRight,
+  Layers,
+  Plus,
+  RefreshCw,
+  Eye,
+  Sliders,
 } from 'lucide-react';
 
 interface VersionGraphWorkspaceProps {
@@ -33,45 +43,16 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
   const [selectedRevisionId, setSelectedRevisionId] = useState<string>('rev_426b');
   const [auditionMode, setAuditionMode] = useState<'after' | 'before' | 'split'>('after');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playbackProgress, setPlaybackProgress] = useState<number>(45);
+  const [playbackProgress, setPlaybackProgress] = useState<number>(42);
+  const [splitPosition, setSplitPosition] = useState<number>(50);
+  const [showBranchMenu, setShowBranchMenu] = useState<boolean>(false);
+  const [commitMessageInput, setCommitMessageInput] = useState<string>('');
 
   const branches = [
-    {
-      id: 'b_main',
-      name: 'main',
-      title: 'Master Cut',
-      author: 'Lead Director',
-      color: '#10b981',
-      commitsCount: 14,
-      lastUpdated: '10m ago',
-    },
-    {
-      id: 'b_sarah',
-      name: 'sarah/pacing',
-      title: 'Dialogue & Pacing',
-      author: 'Sarah (Editor)',
-      color: '#6366f1',
-      commitsCount: 8,
-      lastUpdated: '35m ago',
-    },
-    {
-      id: 'b_alex',
-      name: 'alex/sound-design',
-      title: 'Audio Stems & B-Roll',
-      author: 'Alex (Sound)',
-      color: '#a855f7',
-      commitsCount: 6,
-      lastUpdated: '18m ago',
-    },
-    {
-      id: 'b_agent',
-      name: 'agent/auto-tighten',
-      title: 'AI Copilot Cut',
-      author: 'TakePicker Agent',
-      color: '#f59e0b',
-      commitsCount: 12,
-      lastUpdated: '1h ago',
-    },
+    { id: 'b_main', name: 'main', title: 'Master Broadcast Cut', author: 'Lead Director', color: '#10b981' },
+    { id: 'b_sarah', name: 'sarah/pacing', title: 'Pacing & Dialogue Trims', author: 'Sarah (Editor)', color: '#6366f1' },
+    { id: 'b_alex', name: 'alex/sound-design', title: 'Audio Stems & B-Roll', author: 'Alex (Sound)', color: '#a855f7' },
+    { id: 'b_agent', name: 'agent/auto-tighten', title: 'AI Copilot Cut (Merged)', author: 'TakePicker Agent', color: '#f59e0b' },
   ];
 
   const revisions = [
@@ -79,7 +60,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       id: 'rev_9a41',
       branch: 'main',
       author: 'Lead Director',
-      message: 'Master broadcast baseline (Initial ingest)',
+      message: 'Master broadcast baseline (TakePicker v2 ingest)',
       time: '10m ago',
       color: '#10b981',
       stats: { added: 181, deleted: 0, modified: 0 },
@@ -89,6 +70,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
         hasBroll: false,
         cutDuration: 0,
         audioBoost: 0,
+        brollLabel: '',
       },
     },
     {
@@ -103,7 +85,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       summary: 'Normalized dialogue to -23 LUFS (EBU R128), added 4 atmospheric riser sound effects on Track A2, and overlayed silicon architecture B-roll on Track V2.',
       diff: {
         hasBroll: true,
-        brollLabel: '✨ +3.0s B-Roll Cutaway (silicon_arch_reel)',
+        brollLabel: '✨ +3.0s B-Roll Cutaway (silicon_arch_reel.mp4)',
         cutDuration: 0,
         audioBoost: 3.2,
       },
@@ -120,6 +102,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       summary: 'Pruned dead air pauses longer than 0.6s. Tightened Scene 2 speech from 8.7s to 7.5s, snapping cut boundaries to the frame grid.',
       diff: {
         hasBroll: false,
+        brollLabel: '',
         cutDuration: 1.2,
         audioBoost: 0,
       },
@@ -136,7 +119,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
       summary: 'Collaborative 3-way merge: auto-combined Sarah’s pacing trims with Alex’s audio stems, resolving Scene 2 conflict non-destructively via Audition Lanes.',
       diff: {
         hasBroll: true,
-        brollLabel: '✨ +3.0s B-Roll Cutaway',
+        brollLabel: '✨ +3.0s B-Roll Cutaway (silicon_arch_reel.mp4)',
         cutDuration: 1.2,
         audioBoost: 3.2,
       },
@@ -149,689 +132,1132 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
         height: 'calc(100vh - 50px)',
-        backgroundColor: '#090a10',
+        backgroundColor: '#07080e',
         color: '#f4f4f5',
         overflow: 'hidden',
         userSelect: 'none',
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
       }}
     >
-      {/* 1. Sleek Minimalist Top Bar */}
+      {/* =========================================================================
+          LEFT PANEL: SOURCE CONTROL & GIT TREE GRAPH (VS Code / Antigravity Style)
+          ========================================================================= */}
       <div
         style={{
-          height: '50px',
-          padding: '0 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          backgroundColor: '#0d0f18',
+          width: '325px',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+          backgroundColor: '#0c0e17',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          flexDirection: 'column',
           flexShrink: 0,
+          position: 'relative',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Source Control Header with Three-Dots Menu */}
+        <div
+          style={{
+            height: '44px',
+            padding: '0 14px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: '#0f111c',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(168, 85, 247, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
-              }}
-            >
-              <GitBranch size={16} color="#c084fc" />
-            </div>
-            <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff' }}>
-              Version History & Visual Diff
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '0.04em' }}>
+              SOURCE CONTROL
             </span>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '3px 10px',
-              borderRadius: '999px',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              fontSize: '0.74rem',
-              color: '#a1a1aa',
-            }}
-          >
-            <span>Current Cut:</span>
-            <strong style={{ color: '#10b981' }}>🌿 {currentBranch}</strong>
-          </div>
-        </div>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setShowBranchMenu(!showBranchMenu)}
+              title="Branches & Actions"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '5px',
+                padding: '4px 6px',
+                color: '#cbd5e1',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <MoreHorizontal size={15} />
+            </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={onOpenMergeModal}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '7px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
-              transition: 'opacity 0.15s ease',
-            }}
-          >
-            <GitMerge size={14} />
-            <span>3-Way Timeline Merge</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onBackToStudio}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '7px',
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#e4e4e7',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <SlidersHorizontal size={14} />
-            <span>Back to NLE</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Main 3-Column Studio Layout */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '240px 1fr 440px',
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {/* ================= COLUMN 1: CLEAN BRANCH LIST ================= */}
-        <div
-          style={{
-            borderRight: '1px solid rgba(255, 255, 255, 0.07)',
-            backgroundColor: '#0a0c14',
-            padding: '16px 14px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <div style={{ fontSize: '0.70rem', fontWeight: 700, textTransform: 'uppercase', color: '#71717a', letterSpacing: '0.06em' }}>
-            Timeline Branches ({branches.length})
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {branches.map((b) => {
-              const isCurrent = currentBranch === b.name;
-              return (
-                <div
-                  key={b.id}
-                  onClick={() => onBranchChange(b.name)}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    backgroundColor: isCurrent ? 'rgba(99, 102, 241, 0.14)' : 'rgba(255, 255, 255, 0.02)',
-                    border: isCurrent ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(255, 255, 255, 0.05)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span
-                        style={{
-                          width: '7px',
-                          height: '7px',
-                          borderRadius: '50%',
-                          backgroundColor: b.color,
-                          boxShadow: `0 0 6px ${b.color}`,
-                        }}
-                      />
-                      <span style={{ fontSize: '0.80rem', fontWeight: 700, color: isCurrent ? '#ffffff' : '#d4d4d8' }}>
-                        {b.name}
-                      </span>
-                    </div>
-
-                    {isCurrent && (
-                      <span
-                        style={{
-                          fontSize: '0.58rem',
-                          fontWeight: 800,
-                          padding: '1px 5px',
-                          borderRadius: '3px',
-                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                          color: '#34d399',
-                        }}
-                      >
-                        ACTIVE
-                      </span>
+            {/* Three-Dots Menu Dropdown */}
+            {showBranchMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '28px',
+                  right: 0,
+                  width: '230px',
+                  backgroundColor: '#161928',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '8px',
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.7)',
+                  zIndex: 50,
+                  padding: '6px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', padding: '4px 8px', textTransform: 'uppercase' }}>
+                  Project Branches (Cuts)
+                </div>
+                {branches.map((b) => (
+                  <div
+                    key={b.id}
+                    onClick={() => {
+                      onBranchChange(b.name);
+                      setShowBranchMenu(false);
+                    }}
+                    style={{
+                      padding: '7px 10px',
+                      borderRadius: '5px',
+                      backgroundColor: currentBranch === b.name ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                      color: currentBranch === b.name ? '#ffffff' : '#cbd5e1',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: b.color }} />
+                    <span style={{ flex: 1 }}>{b.name}</span>
+                    {currentBranch === b.name && (
+                      <span style={{ fontSize: '0.60rem', color: '#34d399', fontWeight: 800 }}>ACTIVE</span>
                     )}
                   </div>
+                ))}
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem', color: '#71717a' }}>
-                    <span>{b.author}</span>
-                    <span>{b.lastUpdated}</span>
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0', paddingTop: '4px' }}>
+                  <div
+                    onClick={() => {
+                      onOpenMergeModal();
+                      setShowBranchMenu(false);
+                    }}
+                    style={{
+                      padding: '7px 10px',
+                      borderRadius: '5px',
+                      color: '#c084fc',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <GitMerge size={14} />
+                    <span>3-Way Timeline Merge...</span>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ================= COLUMN 2: REVISION TIMELINE ================= */}
-        <div
-          style={{
-            backgroundColor: '#0c0e17',
-            padding: '20px 24px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          <div>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
-              Cut History & Revisions
-            </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.74rem', color: '#71717a' }}>
-              Click any revision to see exactly what changed in the video and timeline.
-            </p>
+        {/* Section 1: Changes & Commit Input Box (Exact Antigravity / VS Code style) */}
+        <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#94a3b8', fontSize: '0.70rem', fontWeight: 700 }}>
+            <ChevronDown size={14} />
+            <span>CHANGES</span>
           </div>
 
-          {/* Vertical Clean Timeline List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {revisions.map((rev) => {
-              const isSelected = selectedRev.id === rev.id;
+          {/* Commit Message Textarea */}
+          <div
+            style={{
+              position: 'relative',
+              backgroundColor: '#131622',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              padding: '6px 8px',
+            }}
+          >
+            <input
+              type="text"
+              value={commitMessageInput}
+              onChange={(e) => setCommitMessageInput(e.target.value)}
+              placeholder="Message (Ctrl+Enter to commit cut)"
+              style={{
+                width: '100%',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#f1f5f9',
+                fontSize: '0.74rem',
+                outline: 'none',
+                paddingRight: '60px',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setCommitMessageInput('Auto-clean dead air & tighten dialogue')}
+              style={{
+                position: 'absolute',
+                right: '4px',
+                top: '4px',
+                bottom: '4px',
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
+                borderRadius: '4px',
+                color: '#c7d2fe',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                padding: '0 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>Generate</span>
+              <Sparkles size={11} color="#818cf8" />
+            </button>
+          </div>
 
-              return (
+          {/* Blue Commit Button */}
+          <div style={{ marginTop: '8px', display: 'flex' }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (commitMessageInput.trim()) {
+                  alert(`Cut committed: "${commitMessageInput}"`);
+                  setCommitMessageInput('');
+                }
+              }}
+              style={{
+                flex: 1,
+                padding: '6px 12px',
+                borderRadius: '5px 0 0 5px',
+                backgroundColor: '#2563eb',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <Check size={14} />
+              <span>Commit Cut</span>
+            </button>
+            <button
+              type="button"
+              style={{
+                padding: '6px 8px',
+                borderRadius: '0 5px 5px 0',
+                backgroundColor: '#1d4ed8',
+                border: 'none',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Section 2: Graph Header (Antigravity Style) */}
+        <div
+          style={{
+            padding: '10px 12px 6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '0.70rem', fontWeight: 700 }}>
+            <ChevronDown size={14} />
+            <span>GRAPH</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.66rem' }}>
+            <span style={{ color: '#94a3b8' }}>Auto</span>
+            <GitBranch size={13} style={{ cursor: 'pointer' }} />
+            <RefreshCw size={12} style={{ cursor: 'pointer' }} />
+            <MoreHorizontal size={13} style={{ cursor: 'pointer' }} />
+          </div>
+        </div>
+
+        {/* The Tree Graph List (Connected vertical line + glowing dots + commit name + author + clip cuts) */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '8px 8px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            position: 'relative',
+          }}
+        >
+          {/* Vertical connecting line connecting all dots */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '22px',
+              bottom: '30px',
+              left: '21px',
+              width: '2px',
+              backgroundColor: '#3b82f6',
+              opacity: 0.45,
+              zIndex: 1,
+            }}
+          />
+
+          {revisions.map((rev) => {
+            const isSelected = selectedRev.id === rev.id;
+
+            return (
+              <div
+                key={rev.id}
+                onClick={() => setSelectedRevisionId(rev.id)}
+                style={{
+                  position: 'relative',
+                  zIndex: 2,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  padding: '8px 8px',
+                  borderRadius: '6px',
+                  backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                  border: isSelected ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease',
+                }}
+              >
+                {/* Node Circle on Vertical Graph Line */}
                 <div
-                  key={rev.id}
-                  onClick={() => setSelectedRevisionId(rev.id)}
                   style={{
-                    padding: '14px 16px',
-                    borderRadius: '10px',
-                    backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-                    border: isSelected ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '16px',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isSelected ? '0 4px 20px rgba(99, 102, 241, 0.15)' : 'none',
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: isSelected ? '#ffffff' : rev.color,
+                    border: `2px solid ${rev.color}`,
+                    boxShadow: isSelected ? `0 0 10px ${rev.color}` : 'none',
+                    flexShrink: 0,
+                    marginTop: '3px',
                   }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    {/* Node indicator */}
-                    <div
+                />
+
+                {/* Commit Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Row 1: Commit Name + Branch Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span
                       style={{
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
-                        backgroundColor: rev.color,
-                        boxShadow: `0 0 8px ${rev.color}`,
-                        marginTop: '5px',
+                        fontSize: '0.76rem',
+                        fontWeight: isSelected ? 800 : 600,
+                        color: isSelected ? '#ffffff' : '#e2e8f0',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                      }}
+                      title={rev.message}
+                    >
+                      {rev.message}
+                    </span>
+
+                    {/* Branch Pill (Like Antigravity's blue main badge) */}
+                    <span
+                      style={{
+                        fontSize: '0.58rem',
+                        fontWeight: 700,
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        color: '#60a5fa',
+                        border: '1px solid rgba(59, 130, 246, 0.35)',
                         flexShrink: 0,
                       }}
-                    />
-
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: isSelected ? '#ffffff' : '#e4e4e7' }}>
-                          {rev.message}
-                        </span>
-                        {rev.isMerge && (
-                          <span
-                            style={{
-                              fontSize: '0.60rem',
-                              fontWeight: 800,
-                              padding: '1px 6px',
-                              borderRadius: '3px',
-                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                              color: '#34d399',
-                              border: '1px solid rgba(16, 185, 129, 0.4)',
-                            }}
-                          >
-                            3-WAY MERGE
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.70rem', color: '#71717a', marginTop: '4px' }}>
-                        <span>By <strong style={{ color: '#d4d4d8' }}>{rev.author}</strong></span>
-                        <span>•</span>
-                        <span style={{ color: rev.color, fontWeight: 600 }}>🌿 {rev.branch}</span>
-                        <span>•</span>
-                        <span>{rev.time}</span>
-                      </div>
-                    </div>
+                    >
+                      {rev.branch}
+                    </span>
                   </div>
 
-                  {/* Diff Badges */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                  {/* Row 2: Who did it & Time */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.65rem', color: '#94a3b8', marginTop: '2px' }}>
+                    <span style={{ color: '#cbd5e1', fontWeight: 600 }}>{rev.author}</span>
+                    <span>•</span>
+                    <span>{rev.time}</span>
+                  </div>
+
+                  {/* Row 3: Clip Cuts & Diff Badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '5px' }}>
                     {rev.stats.added > 0 && (
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#34d399', backgroundColor: 'rgba(16, 185, 129, 0.12)', padding: '2px 7px', borderRadius: '4px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.60rem',
+                          fontWeight: 800,
+                          color: '#34d399',
+                          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                        }}
+                      >
                         +{rev.stats.added} clips
                       </span>
                     )}
                     {rev.stats.deleted > 0 && (
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.12)', padding: '2px 7px', borderRadius: '4px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.60rem',
+                          fontWeight: 800,
+                          color: '#f43f5e',
+                          backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                        }}
+                      >
                         -{rev.stats.deleted} cuts
                       </span>
                     )}
                     {rev.stats.modified > 0 && (
-                      <span style={{ fontSize: '0.66rem', fontWeight: 700, color: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.12)', padding: '2px 7px', borderRadius: '4px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.60rem',
+                          fontWeight: 800,
+                          color: '#a78bfa',
+                          backgroundColor: 'rgba(168, 85, 247, 0.15)',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                        }}
+                      >
                         {rev.stats.modified} trims
+                      </span>
+                    )}
+                    {rev.isMerge && (
+                      <span
+                        style={{
+                          fontSize: '0.58rem',
+                          fontWeight: 800,
+                          color: '#fbbf24',
+                          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        MERGE
                       </span>
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* ================= COLUMN 3: VISUAL DIFF & VIDEO AUDITION ================= */}
-        <div
-          style={{
-            borderLeft: '1px solid rgba(255, 255, 255, 0.07)',
-            backgroundColor: '#0a0c14',
-            padding: '18px 20px',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          {/* Header */}
-          <div>
-            <div style={{ fontSize: '0.70rem', fontWeight: 700, textTransform: 'uppercase', color: '#71717a', letterSpacing: '0.06em' }}>
-              Visual Diff Inspector
-            </div>
-            <h4 style={{ margin: '4px 0 0 0', fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
-              {selectedRev.message}
-            </h4>
-            <div style={{ fontSize: '0.72rem', color: '#a1a1aa', marginTop: '3px' }}>
-              Author: <strong style={{ color: '#ffffff' }}>{selectedRev.author}</strong> on <span style={{ color: selectedRev.color, fontWeight: 700 }}>🌿 {selectedRev.branch}</span>
-            </div>
-          </div>
-
-          {/* 1. Sleek Video Player with Before vs After Toggle */}
-          <div
-            style={{
-              borderRadius: '10px',
-              backgroundColor: '#000000',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* 16:9 Viewport */}
-            <div
-              style={{
-                height: '170px',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#04060d',
-              }}
-            >
-              {/* Background gradient simulating video state */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background:
-                    auditionMode === 'before'
-                      ? 'radial-gradient(ellipse at center, #1e1b4b 0%, #000000 80%)'
-                      : auditionMode === 'after'
-                      ? 'radial-gradient(ellipse at center, #064e3b 0%, #000000 80%)'
-                      : 'linear-gradient(90deg, #1e1b4b 0%, #1e1b4b 50%, #064e3b 50%, #064e3b 100%)',
-                  opacity: 0.85,
-                }}
-              />
-
-              {auditionMode === 'split' && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    bottom: 0,
-                    left: '50%',
-                    width: '2px',
-                    backgroundColor: '#fbbf24',
-                    zIndex: 2,
-                    boxShadow: '0 0 8px #fbbf24',
-                  }}
-                />
-              )}
-
-              <div style={{ zIndex: 3, textAlign: 'center' }}>
-                <Film size={26} color={auditionMode === 'before' ? '#818cf8' : '#34d399'} style={{ margin: '0 auto 6px' }} />
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ffffff' }}>
-                  {auditionMode === 'before' && 'A: BEFORE THIS EDIT'}
-                  {auditionMode === 'after' && 'B: AFTER THIS EDIT (COMMITTED)'}
-                  {auditionMode === 'split' && 'A/B SPLIT SCREEN AUDITION'}
-                </div>
-                <div style={{ fontSize: '0.68rem', color: '#71717a', marginTop: '2px' }}>
-                  00:01:14:08 • 24.0 fps
-                </div>
-              </div>
-            </div>
-
-            {/* Video Player Controls & Toggle */}
-            <div style={{ padding: '10px 12px', backgroundColor: '#0d101a', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              {/* Scrubber */}
-              <div
-                style={{
-                  height: '4px',
-                  width: '100%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '2px',
-                  marginBottom: '10px',
-                  position: 'relative',
-                  cursor: 'pointer',
-                }}
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-                  setPlaybackProgress(p);
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${playbackProgress}%`,
-                    backgroundColor: auditionMode === 'before' ? '#818cf8' : '#10b981',
-                    borderRadius: '2px',
-                  }}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '5px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    color: '#ffffff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '0.70rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-                  <span>{isPlaying ? 'Pause' : 'Play'}</span>
-                </button>
-
-                {/* Clean A/B Pill Switcher */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    padding: '2px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setAuditionMode('before')}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      backgroundColor: auditionMode === 'before' ? '#6366f1' : 'transparent',
-                      color: auditionMode === 'before' ? '#ffffff' : '#71717a',
-                      fontSize: '0.66rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Before
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuditionMode('after')}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      backgroundColor: auditionMode === 'after' ? '#10b981' : 'transparent',
-                      color: auditionMode === 'after' ? '#ffffff' : '#71717a',
-                      fontSize: '0.66rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    After
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuditionMode('split')}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      backgroundColor: auditionMode === 'split' ? '#f59e0b' : 'transparent',
-                      color: auditionMode === 'split' ? '#000000' : '#71717a',
-                      fontSize: '0.66rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Split
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Visual Timeline Diff Track */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ fontSize: '0.70rem', fontWeight: 700, textTransform: 'uppercase', color: '#71717a', letterSpacing: '0.06em' }}>
-              Visual Timeline Delta
-            </div>
-
-            <div
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '8px',
-                padding: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-              }}
-            >
-              {/* Track V2 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '24px', fontSize: '0.64rem', fontWeight: 800, color: '#818cf8' }}>V2</span>
-                <div style={{ flex: 1, height: '26px', backgroundColor: 'rgba(0, 0, 0, 0.35)', borderRadius: '4px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '0 4px' }}>
-                  {selectedRev.diff.hasBroll ? (
-                    <div
-                      style={{
-                        width: '70%',
-                        height: '18px',
-                        backgroundColor: 'rgba(16, 185, 129, 0.25)',
-                        border: '1px solid #10b981',
-                        borderRadius: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        color: '#a7f3d0',
-                        fontSize: '0.62rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Sparkles size={11} color="#34d399" />
-                      <span>{selectedRev.diff.brollLabel || '✨ Added B-Roll Cutaway'}</span>
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: '0.60rem', color: '#52525b', fontStyle: 'italic' }}>No overlay changes</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Track V1 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '24px', fontSize: '0.64rem', fontWeight: 800, color: '#c084fc' }}>V1</span>
-                <div style={{ flex: 1, height: '30px', backgroundColor: 'rgba(0, 0, 0, 0.45)', borderRadius: '4px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '0 4px', gap: '3px' }}>
-                  <div style={{ width: '28%', height: '20px', backgroundColor: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.60rem', color: '#c7d2fe' }}>
-                    Scene 1 (5.0s)
-                  </div>
-
-                  <div style={{ width: '38%', height: '20px', backgroundColor: 'rgba(245, 158, 11, 0.25)', border: '1px solid #f59e0b', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.60rem', color: '#fde68a', fontWeight: 700 }}>
-                    Scene 2 (Tightened)
-                  </div>
-
-                  {selectedRev.diff.cutDuration > 0 && (
-                    <div
-                      style={{
-                        width: '18%',
-                        height: '20px',
-                        backgroundColor: 'rgba(244, 63, 94, 0.2)',
-                        border: '1px dashed #f43f5e',
-                        borderRadius: '3px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '0.58rem',
-                        color: '#fca5a5',
-                        fontWeight: 800,
-                      }}
-                    >
-                      <Scissors size={10} color="#f87171" style={{ marginRight: '2px' }} />
-                      <span>-{selectedRev.diff.cutDuration}s CUT</span>
-                    </div>
-                  )}
-
-                  <div style={{ flex: 1, height: '20px', backgroundColor: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.4)', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.60rem', color: '#c7d2fe' }}>
-                    Scene 3
-                  </div>
-                </div>
-              </div>
-
-              {/* Track A1 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '24px', fontSize: '0.64rem', fontWeight: 800, color: '#34d399' }}>A1</span>
-                <div style={{ flex: 1, height: '24px', backgroundColor: 'rgba(0, 0, 0, 0.35)', borderRadius: '4px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '0 6px' }}>
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '16px',
-                      backgroundColor: selectedRev.diff.audioBoost > 0 ? 'rgba(168, 85, 247, 0.25)' : 'rgba(16, 185, 129, 0.15)',
-                      border: selectedRev.diff.audioBoost > 0 ? '1px solid #a855f7' : '1px solid rgba(16, 185, 129, 0.3)',
-                      borderRadius: '3px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0 6px',
-                      fontSize: '0.58rem',
-                      color: selectedRev.diff.audioBoost > 0 ? '#e9d5ff' : '#a7f3d0',
-                      fontWeight: 700,
-                    }}
-                  >
-                    <span>{selectedRev.diff.audioBoost > 0 ? 'Leveled to -23.0 LUFS (+3.2dB dialogue boost)' : 'Dialogue Track (Clean)'}</span>
-                    <span>15ms microfades</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Diff Legend */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.62rem', color: '#a1a1aa', padding: '0 4px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: '#10b981' }} /> Added
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: '#f43f5e' }} /> Cut/Deleted
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: '#f59e0b' }} /> Trimmed
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: '#a855f7' }} /> Audio Level
-              </span>
-            </div>
-          </div>
-
-          {/* Plain English Summary */}
-          <div
-            style={{
-              padding: '10px 12px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              fontSize: '0.70rem',
-              color: '#d4d4d8',
-              lineHeight: 1.45,
-            }}
-          >
-            {selectedRev.summary}
-          </div>
-
-          {/* Bottom Action CTA */}
+        {/* Sidebar Footer: Return to Studio NLE */}
+        <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: '#090b14' }}>
           <button
             type="button"
-            onClick={() => onBranchChange(selectedRev.branch)}
+            onClick={onBackToStudio}
             style={{
-              padding: '10px 14px',
-              borderRadius: '7px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-              border: 'none',
-              color: '#ffffff',
-              fontSize: '0.78rem',
-              fontWeight: 800,
+              width: '100%',
+              padding: '7px 12px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#cbd5e1',
+              fontSize: '0.74rem',
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
-              marginTop: 'auto',
             }}
           >
-            <span>Switch Timeline to 🌿 {selectedRev.branch}</span>
-            <ArrowRight size={14} />
+            <SlidersHorizontal size={13} />
+            <span>Return to Studio NLE</span>
           </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          MAIN VIEW: FULL SCREEN BIG VIDEO AUDITION & FULL-WIDTH TIMELINE DIFF
+          ========================================================================= */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          backgroundColor: '#05060b',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Top Breadcrumb & Commit Action Bar */}
+        <div
+          style={{
+            height: '44px',
+            padding: '0 20px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            backgroundColor: '#0a0d18',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span
+              style={{
+                fontSize: '0.64rem',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '4px',
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                color: '#818cf8',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
+              }}
+            >
+              🌿 {selectedRev.branch}
+            </span>
+            <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#ffffff' }}>
+              {selectedRev.message}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+              by <strong style={{ color: '#e2e8f0' }}>{selectedRev.author}</strong> ({selectedRev.time})
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={onOpenMergeModal}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(124, 58, 237, 0.35)',
+              }}
+            >
+              <GitMerge size={13} />
+              <span>Review & 3-Way Merge</span>
+            </button>
+          </div>
+        </div>
+
+        {/* =====================================================================
+            UPPER VIEWPORT: BIG VIDEO SEEING SPACE (Cinematic Player)
+            ===================================================================== */}
+        <div
+          style={{
+            flex: '1 1 58%',
+            minHeight: '280px',
+            backgroundColor: '#000000',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          {/* Simulated Video Canvas / Background Frame */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background:
+                auditionMode === 'before'
+                  ? 'radial-gradient(ellipse at center, #1e1b4b 0%, #000000 80%)'
+                  : auditionMode === 'after'
+                  ? 'radial-gradient(ellipse at center, #064e3b 0%, #000000 80%)'
+                  : `linear-gradient(90deg, #1e1b4b 0%, #1e1b4b ${splitPosition}%, #064e3b ${splitPosition}%, #064e3b 100%)`,
+              opacity: 0.95,
+            }}
+          />
+
+          {/* Interactive Split Screen Divider */}
+          {auditionMode === 'split' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: `${splitPosition}%`,
+                width: '3px',
+                backgroundColor: '#fbbf24',
+                zIndex: 6,
+                boxShadow: '0 0 14px #fbbf24',
+                cursor: 'ew-resize',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  backgroundColor: '#fbbf24',
+                  boxShadow: '0 0 10px rgba(0,0,0,0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#000000',
+                  fontSize: '0.65rem',
+                  fontWeight: 900,
+                }}
+              >
+                ◫
+              </div>
+            </div>
+          )}
+
+          {/* Left/Right Split Screen Labels */}
+          {auditionMode === 'split' && (
+            <>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  left: '24px',
+                  zIndex: 5,
+                  padding: '4px 10px',
+                  borderRadius: '5px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.25)',
+                  border: '1px solid #ef4444',
+                  color: '#fca5a5',
+                  fontSize: '0.70rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                A: BEFORE (PRE-EDIT)
+              </div>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '24px',
+                  zIndex: 5,
+                  padding: '4px 10px',
+                  borderRadius: '5px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.25)',
+                  border: '1px solid #10b981',
+                  color: '#6ee7b7',
+                  fontSize: '0.70rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                B: AFTER (THIS CUT)
+              </div>
+            </>
+          )}
+
+          {/* Center Video Frame Mockup */}
+          <div style={{ zIndex: 4, textAlign: 'center', pointerEvents: 'none', maxWidth: '600px' }}>
+            <Film
+              size={48}
+              color={auditionMode === 'before' ? '#818cf8' : auditionMode === 'after' ? '#34d399' : '#fbbf24'}
+              style={{ margin: '0 auto 12px' }}
+            />
+            <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ffffff', letterSpacing: '0.02em' }}>
+              {auditionMode === 'before' && '⏪ A: PRE-EDIT BASELINE CUT (UNMODIFIED)'}
+              {auditionMode === 'after' && '⏩ B: REVISED MASTER CUT (THIS COMMIT APPLIED)'}
+              {auditionMode === 'split' && '🔀 A/B REAL-TIME SPLIT SCREEN AUDITION'}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '6px' }}>
+              Playhead: <code style={{ color: '#38bdf8', fontWeight: 800 }}>00:01:14:08</code> @ 24.000 fps •{' '}
+              <span style={{ color: '#34d399', fontWeight: 700 }}>100/100 Quality Score</span>
+            </div>
+          </div>
+
+          {/* Floating Top Controls: Audition Mode Selector */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              backgroundColor: 'rgba(10, 12, 22, 0.9)',
+              backdropFilter: 'blur(10px)',
+              padding: '4px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setAuditionMode('before')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: auditionMode === 'before' ? '#ef4444' : 'transparent',
+                color: auditionMode === 'before' ? '#ffffff' : '#94a3b8',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease',
+              }}
+            >
+              A: Before
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuditionMode('after')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: auditionMode === 'after' ? '#10b981' : 'transparent',
+                color: auditionMode === 'after' ? '#ffffff' : '#94a3b8',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease',
+              }}
+            >
+              B: After
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuditionMode('split')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: auditionMode === 'split' ? '#f59e0b' : 'transparent',
+                color: auditionMode === 'split' ? '#000000' : '#94a3b8',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease',
+              }}
+            >
+              Split Comparison
+            </button>
+          </div>
+
+          {/* Floating Bottom Bar: Video Scrubbing & Playhead Controls */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '12px 24px',
+              background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.9) 100%)',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            {/* Scrubber Track */}
+            <div
+              style={{
+                height: '7px',
+                width: '100%',
+                backgroundColor: 'rgba(255, 255, 255, 0.16)',
+                borderRadius: '4px',
+                position: 'relative',
+                cursor: 'pointer',
+              }}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const p = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                setPlaybackProgress(p);
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${playbackProgress}%`,
+                  backgroundColor: auditionMode === 'before' ? '#ef4444' : '#10b981',
+                  borderRadius: '4px',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  left: `${playbackProgress}%`,
+                  width: '15px',
+                  height: '15px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 0 10px rgba(0,0,0,0.8)',
+                  transform: 'translateX(-50%)',
+                }}
+              />
+            </div>
+
+            {/* Play Button, Status & Scrubber Info */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 14px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                  <span>{isPlaying ? 'Pause' : 'Play Audition'}</span>
+                </button>
+
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                  Press <kbd style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 5px', borderRadius: '3px' }}>Space</kbd> to toggle playback
+                </span>
+              </div>
+
+              <div style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
+                Audition State:{' '}
+                <strong style={{ color: auditionMode === 'before' ? '#f87171' : '#34d399' }}>
+                  {auditionMode === 'before'
+                    ? 'Original uncut pacing (Raw audio)'
+                    : '15ms microfades applied • Loudness leveled to -23 LUFS'}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================================
+            LOWER VIEWPORT: FULL-WIDTH MULTI-TRACK TIMELINE DIFF
+            ===================================================================== */}
+        <div
+          style={{
+            flex: '1 1 42%',
+            padding: '16px 24px',
+            backgroundColor: '#090b14',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            overflowY: 'auto',
+          }}
+        >
+          {/* Header of Timeline Diff */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#ffffff' }}>
+                  Timeline Delta: What Changed in this Commit
+                </h3>
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    color: '#60a5fa',
+                  }}
+                >
+                  {selectedRev.stats.added + selectedRev.stats.deleted + selectedRev.stats.modified} Spatio-Temporal AST Operations
+                </span>
+              </div>
+              <p style={{ margin: '3px 0 0 0', fontSize: '0.74rem', color: '#94a3b8' }}>
+                {selectedRev.summary}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onBranchChange(selectedRev.branch)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '7px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 12px rgba(99, 102, 241, 0.4)',
+                flexShrink: 0,
+              }}
+            >
+              <span>Switch Active Timeline to this Cut</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+
+          {/* Full-Width Visual Multi-Track Canvas */}
+          <div
+            style={{
+              backgroundColor: '#06070e',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '8px',
+              padding: '14px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            {/* Track V2 (Overlays / B-Roll) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ width: '30px', fontSize: '0.68rem', fontWeight: 800, color: '#818cf8', flexShrink: 0 }}>V2</span>
+              <div
+                style={{
+                  flex: 1,
+                  height: '30px',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderRadius: '5px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 4px',
+                }}
+              >
+                {selectedRev.diff.hasBroll ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '22%',
+                      width: '42%',
+                      height: '22px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.25)',
+                      border: '1px solid #10b981',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      color: '#a7f3d0',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Sparkles size={12} color="#34d399" />
+                    <span>{selectedRev.diff.brollLabel}</span>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.64rem', color: '#475569', fontStyle: 'italic', paddingLeft: '8px' }}>
+                    No overlay changes on this track
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Track V1 (Primary Dialogue Track) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ width: '30px', fontSize: '0.68rem', fontWeight: 800, color: '#c084fc', flexShrink: 0 }}>V1</span>
+              <div
+                style={{
+                  flex: 1,
+                  height: '36px',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  borderRadius: '5px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 4px',
+                  gap: '4px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '24%',
+                    height: '28px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.66rem',
+                    color: '#c7d2fe',
+                  }}
+                >
+                  Scene 1 (Intro 5.0s)
+                </div>
+
+                <div
+                  style={{
+                    width: '38%',
+                    height: '28px',
+                    backgroundColor: 'rgba(245, 158, 11, 0.25)',
+                    border: '1px solid #f59e0b',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.68rem',
+                    color: '#fde68a',
+                    fontWeight: 700,
+                  }}
+                >
+                  Scene 2 (Tightened Dialogue 7.5s)
+                </div>
+
+                {selectedRev.diff.cutDuration > 0 && (
+                  <div
+                    style={{
+                      width: '16%',
+                      height: '28px',
+                      backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                      border: '1px dashed #f43f5e',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.64rem',
+                      color: '#fca5a5',
+                      fontWeight: 800,
+                      backgroundImage:
+                        'repeating-linear-gradient(45deg, rgba(244, 63, 94, 0.15), rgba(244, 63, 94, 0.15) 4px, transparent 4px, transparent 8px)',
+                    }}
+                  >
+                    <Scissors size={11} color="#f87171" style={{ marginRight: '3px' }} />
+                    <span>-{selectedRev.diff.cutDuration}s CUT</span>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    flex: 1,
+                    height: '28px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.66rem',
+                    color: '#c7d2fe',
+                  }}
+                >
+                  Scene 3 (Climax 8.0s)
+                </div>
+              </div>
+            </div>
+
+            {/* Track A1 (Audio Stems & Leveling) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ width: '30px', fontSize: '0.68rem', fontWeight: 800, color: '#34d399', flexShrink: 0 }}>A1</span>
+              <div
+                style={{
+                  flex: 1,
+                  height: '28px',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderRadius: '5px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 8px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    height: '22px',
+                    backgroundColor:
+                      selectedRev.diff.audioBoost > 0 ? 'rgba(168, 85, 247, 0.25)' : 'rgba(16, 185, 129, 0.15)',
+                    border:
+                      selectedRev.diff.audioBoost > 0
+                        ? '1px solid #a855f7'
+                        : '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 10px',
+                    fontSize: '0.64rem',
+                    color: selectedRev.diff.audioBoost > 0 ? '#e9d5ff' : '#a7f3d0',
+                    fontWeight: 700,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Volume2 size={12} />
+                    <span>
+                      {selectedRev.diff.audioBoost > 0
+                        ? 'Leveled to -23.0 LUFS (+3.2dB dialogue boost)'
+                        : 'Dialogue Track Audio (EBU R128 Clean)'}
+                    </span>
+                  </div>
+                  <span>15ms microfades active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Diff Color Legend */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.70rem',
+              color: '#94a3b8',
+              padding: '0 4px',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#10b981' }} />
+              <span>Green: Added Content / B-Roll</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#f43f5e' }} />
+              <span>Red: Cut / Deleted Silence</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#f59e0b' }} />
+              <span>Amber: Trimmed Boundary (24fps snap)</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#a855f7' }} />
+              <span>Purple: Audio Leveling & Microfades</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
