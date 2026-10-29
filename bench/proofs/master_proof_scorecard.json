@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-10-29T15:19:16Z",
+  "timestamp": "2026-10-29T17:25:13Z",
   "overall_status": "PASS",
   "total_suites": 6,
   "passed_suites": 6,
   "total_invariants": 30,
   "verified_invariants": 30,
   "pass_rate_pct": 100.0,
-  "total_elapsed_sec": 5.802,
+  "total_elapsed_sec": 10.604,
   "suites": [
     {
       "id": "PROOFS_01_MULTI_SCENARIO",
@@ -14,7 +14,7 @@
       "script": "run_multi_scenario_proofs.py",
       "invariants": 6,
       "passed": true,
-      "elapsed_sec": 0.105,
+      "elapsed_sec": 0.227,
       "exit_code": 0
     },
     {
@@ -23,7 +23,7 @@
       "script": "run_cross_corpus_benchmark.py",
       "invariants": 4,
       "passed": true,
-      "elapsed_sec": 0.107,
+      "elapsed_sec": 0.187,
       "exit_code": 0
     },
     {
@@ -32,7 +32,7 @@
       "script": "run_version_control_proofs.py",
       "invariants": 6,
       "passed": true,
-      "elapsed_sec": 1.538,
+      "elapsed_sec": 3.646,
       "exit_code": 0
     },
     {
@@ -41,7 +41,7 @@
       "script": "run_aesthetic_and_rl_proofs.py",
       "invariants": 4,
       "passed": true,
-      "elapsed_sec": 0.708,
+      "elapsed_sec": 1.043,
       "exit_code": 0
     },
     {
@@ -50,7 +50,7 @@
       "script": "run_frontier_rl_proofs.py",
       "invariants": 6,
       "passed": true,
-      "elapsed_sec": 0.041,
+      "elapsed_sec": 0.085,
       "exit_code": 0
     },
     {
@@ -59,7 +59,7 @@
       "script": "run_cardboard_ai_proof.py",
       "invariants": 4,
       "passed": true,
-      "elapsed_sec": 3.303,
+      "elapsed_sec": 5.418,
       "exit_code": 0
     }
   ]

@@ -748,13 +748,32 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
           }}
         >
           {/* Real Video Player Element (Playing generated video proof) */}
-          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            onClick={togglePlay}
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
             {/* Main / After Video */}
             <video
               ref={videoRef}
               src={currentVideoSrc}
               onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={() => {
+                if (videoRef.current && videoRef.current.duration) {
+                  setDuration(videoRef.current.duration);
+                }
+              }}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
               onEnded={() => setIsPlaying(false)}
+              preload="auto"
               playsInline
               style={{
                 maxHeight: '100%',
@@ -775,6 +794,7 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
               <video
                 ref={beforeVideoRef}
                 src="/proofs/1_full_defects_showcase.mp4"
+                preload="auto"
                 playsInline
                 muted
                 style={{
@@ -787,6 +807,30 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   clipPath: `polygon(0 0, ${splitPosition}% 0, ${splitPosition}% 100%, 0 100%)`,
                 }}
               />
+            )}
+
+            {/* Big Play Button Overlay when paused */}
+            {!isPlaying && (
+              <div
+                style={{
+                  position: 'absolute',
+                  zIndex: 8,
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                  border: '2px solid rgba(255, 255, 255, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.8)',
+                  backdropFilter: 'blur(4px)',
+                  transition: 'transform 0.15s ease',
+                  pointerEvents: 'none',
+                }}
+              >
+                <Play size={26} color="#ffffff" style={{ marginLeft: '4px' }} />
+              </div>
             )}
           </div>
 

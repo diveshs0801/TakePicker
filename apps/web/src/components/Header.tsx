@@ -155,8 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
               {currentAsset?.filename?.toLowerCase().includes('birthday')
                 ? 'Cardboard AI Social Reel (30s)'
                 : currentAsset?.filename
-                ? currentAsset.filename.replace(/\.mp4$/i, '')
-                : 'Cardboard AI Social Reel (30s)'}
+                  ? currentAsset.filename.replace(/\.mp4$/i, '')
+                  : 'Cardboard AI Social Reel (30s)'}
             </span>
           </div>
 
@@ -373,14 +373,14 @@ export const Header: React.FC<HeaderProps> = ({
                 qualityScore >= 90
                   ? 'rgba(16, 185, 129, 0.12)'
                   : qualityScore >= 75
-                  ? 'rgba(245, 158, 11, 0.12)'
-                  : 'rgba(239, 68, 68, 0.12)',
+                    ? 'rgba(245, 158, 11, 0.12)'
+                    : 'rgba(239, 68, 68, 0.12)',
               border:
                 qualityScore >= 90
                   ? '1px solid rgba(16, 185, 129, 0.3)'
                   : qualityScore >= 75
-                  ? '1px solid rgba(245, 158, 11, 0.3)'
-                  : '1px solid rgba(239, 68, 68, 0.3)',
+                    ? '1px solid rgba(245, 158, 11, 0.3)'
+                    : '1px solid rgba(239, 68, 68, 0.3)',
               color: qualityScore >= 90 ? '#34d399' : qualityScore >= 75 ? '#fbbf24' : '#f87171',
               fontSize: '0.72rem',
               fontWeight: 700,
