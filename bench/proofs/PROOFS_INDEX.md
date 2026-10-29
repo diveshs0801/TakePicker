@@ -50,6 +50,7 @@ To prove that the linter is **not calibrated to a single microphone, room, or ed
 | **CORPUS B** | **Fast-Paced Social Reel / Shorts**<br>`the_silicon_architect_zafa_style_reel.mp4` | 720x1280 (**9:16 Vertical**)<br>30.0 fps · 24 kHz mono | 3.0s Social Hook retention window, 9:16 Title Safe margins, rapid cut flutter | **82 ➔ 100/100** | 4.22 ms | **PASS ✅** |
 | **CORPUS C** | **Scripted Cinematic Explainer**<br>`neetcode_to_ai_cinematic_explainer.mp4` | 1920x1080 (16:9)<br>**29.99 fps NTSC** · 24 kHz mono | NTSC fractional frame snapping (1/29.99s); causal connective discourse flow | **88 ➔ 100/100** | 4.21 ms | **PASS ✅** |
 | **CORPUS D** | **Multi-Take Retake Creator Footage**<br>`1_before_injected_defects.mp4` | 854x480 (**480p SD**)<br>24.0 fps · 44.1 kHz stereo | Sub-frame gap jitter (<100ms) between take swaps, speech cadence WPM, pacing stagnation | **79 ➔ 100/100** | 4.21 ms | **PASS ✅** |
+| **CORPUS E** | **Cardboard AI CEO Talking-Head Benchmark**<br>`cardboard_ceo_h264.mp4` | 1280x720 (16:9)<br>**23.98 fps** · 48.0 kHz stereo | ITU-R BT.1359 lip-sync drift (+95ms), EBU R128 loudness spike, mid-syllable pop, 1.8s pre-hook dead air | **64 ➔ 100/100** | 3.22 s | **PASS ✅** |
 
 ---
 

@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-10-29T13:50:18Z",
+  "timestamp": "2026-10-29T15:19:16Z",
   "overall_status": "PASS",
-  "total_suites": 5,
-  "passed_suites": 5,
-  "total_invariants": 26,
-  "verified_invariants": 26,
+  "total_suites": 6,
+  "passed_suites": 6,
+  "total_invariants": 30,
+  "verified_invariants": 30,
   "pass_rate_pct": 100.0,
-  "total_elapsed_sec": 6.135,
+  "total_elapsed_sec": 5.802,
   "suites": [
     {
       "id": "PROOFS_01_MULTI_SCENARIO",
@@ -14,7 +14,7 @@
       "script": "run_multi_scenario_proofs.py",
       "invariants": 6,
       "passed": true,
-      "elapsed_sec": 0.19,
+      "elapsed_sec": 0.105,
       "exit_code": 0
     },
     {
@@ -23,7 +23,7 @@
       "script": "run_cross_corpus_benchmark.py",
       "invariants": 4,
       "passed": true,
-      "elapsed_sec": 0.183,
+      "elapsed_sec": 0.107,
       "exit_code": 0
     },
     {
@@ -32,7 +32,7 @@
       "script": "run_version_control_proofs.py",
       "invariants": 6,
       "passed": true,
-      "elapsed_sec": 3.145,
+      "elapsed_sec": 1.538,
       "exit_code": 0
     },
     {
@@ -41,7 +41,7 @@
       "script": "run_aesthetic_and_rl_proofs.py",
       "invariants": 4,
       "passed": true,
-      "elapsed_sec": 2.543,
+      "elapsed_sec": 0.708,
       "exit_code": 0
     },
     {
@@ -50,7 +50,16 @@
       "script": "run_frontier_rl_proofs.py",
       "invariants": 6,
       "passed": true,
-      "elapsed_sec": 0.073,
+      "elapsed_sec": 0.041,
+      "exit_code": 0
+    },
+    {
+      "id": "PROOFS_06_CARDBOARD_AI",
+      "name": "Problem #09: Cardboard AI Real Talking-Head Benchmark (CEO Saksham)",
+      "script": "run_cardboard_ai_proof.py",
+      "invariants": 4,
+      "passed": true,
+      "elapsed_sec": 3.303,
       "exit_code": 0
     }
   ]

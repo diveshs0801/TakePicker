@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-29T13:50:12Z",
+  "timestamp": "2026-10-29T15:19:11Z",
   "benchmarkTarget": "Cardboard AI Core Problem #09 (Verification & Linters)",
   "sourceAsset": "Today is my 21st Birthday, Here's what I have to say - TheCreativeMagician (1080p, h264).mp4",
   "overallPrecision": 1.0,
@@ -30,7 +30,7 @@
       "layer": "Syntactic / Acoustic",
       "detected": true,
       "clippedWord": "birthday",
-      "astLatencyMs": 0.007,
+      "astLatencyMs": 0.003,
       "initialQualityScore": 73,
       "postRepairScore": 100,
       "repairAction": "Padded boundary by +58ms to 3.53s and synthesized 15ms cosine microfade",

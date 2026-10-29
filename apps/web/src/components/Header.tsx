@@ -150,11 +150,13 @@ export const Header: React.FC<HeaderProps> = ({
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}
-              title={currentAsset?.filename || 'Birthday Vlog (Clean Edit)'}
+              title={currentAsset?.filename || 'Cardboard AI Social Reel (30s Cut)'}
             >
-              {currentAsset?.filename
+              {currentAsset?.filename?.toLowerCase().includes('birthday')
+                ? 'Cardboard AI Social Reel (30s)'
+                : currentAsset?.filename
                 ? currentAsset.filename.replace(/\.mp4$/i, '')
-                : 'Birthday Vlog Project'}
+                : 'Cardboard AI Social Reel (30s)'}
             </span>
           </div>
 

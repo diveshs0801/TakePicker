@@ -100,14 +100,20 @@ export default function Home() {
     setCurrentView('studio');
   };
 
-  // Initial load: fetch all assets
+  // Initial load: fetch all assets, prioritizing clean short-form cuts over raw 44m dumps
   const fetchAllAssets = async () => {
     try {
       const res = await fetch('/api/assets');
       if (res.ok) {
         const list = await res.json();
         setAllAssets(list || []);
-        if (list && list.length > 0) {
+        // Prioritize short-form showcase cuts (<= 120s) over long unedited camera dumps
+        const shortFormAsset = list.find(
+          (a: any) => (a.id === DEMO_ASSET_ID || (a.duration && a.duration <= 120)) && a.status === 'READY'
+        );
+        if (shortFormAsset) {
+          loadAsset(shortFormAsset.id);
+        } else if (list && list.length > 0) {
           loadAsset(list[0].id);
         } else {
           loadAsset(DEMO_ASSET_ID);
@@ -548,7 +554,11 @@ export default function Home() {
             >
               <TimelineTrack
                 timeline={timeline}
-                totalDuration={currentAsset?.duration || 20.0}
+                totalDuration={
+                  timeline?.clips && timeline.clips.length > 0
+                    ? Math.max(20.0, Math.min(60.0, Math.ceil(Math.max(...timeline.clips.map((c) => c.out || 0)) + 2)))
+                    : (currentAsset?.duration && currentAsset.duration <= 120 ? currentAsset.duration : 30.0)
+                }
                 currentTime={currentTime}
                 onSeek={handleSeek}
                 assetId={currentAsset?.id}

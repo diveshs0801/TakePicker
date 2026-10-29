@@ -1,0 +1,49 @@
+{
+  "benchmarkName": "Cardboard AI Real Footage Verification Proof",
+  "subject": "Saksham Aggarwal (CEO, Cardboard AI)",
+  "sourceAsset": "bench\\fixtures\\cardboard_ceo_h264.mp4",
+  "defectiveArtifact": "bench\\proofs\\videos\\cardboard_ceo_defective.mp4",
+  "repairedArtifact": "bench\\proofs\\videos\\cardboard_ceo_repaired.mp4",
+  "preRepairScore": 64,
+  "postRepairScore": 100,
+  "latencyMs": 3209.02,
+  "defectsDetectedAndRepaired": [
+    {
+      "layer": "Physical / Signal Integrity",
+      "rule": "ITU_R_BT1359_AV_SYNC_DRIFT",
+      "timestamp": "00:00:00 - 00:00:18",
+      "measuredValue": "+95ms audio lag",
+      "threshold": "[-45ms, +15ms]",
+      "severity": "CRITICAL",
+      "description": "Lip-sync out of phase by +95ms exceeding ITU-R broadcast bounds."
+    },
+    {
+      "layer": "Physical / Signal Integrity",
+      "rule": "EBU_R128_LOUDNESS_SURGE",
+      "timestamp": "00:00:04.200",
+      "measuredValue": "-15.2 LUFS (Peak +3.1 dBFS)",
+      "threshold": "-23.0 LUFS \u00b10.5 LU",
+      "severity": "HIGH",
+      "description": "Dialogue loudness spiked by +5.5dB, blowing past broadcast ceiling."
+    },
+    {
+      "layer": "Syntactic / Acoustic Grid",
+      "rule": "WORD_CUTOFF_SYLLABLE_POP",
+      "timestamp": "00:00:08.450",
+      "measuredValue": "Cut at 48% through 'agentic' phoneme /t\u026ak/",
+      "threshold": "Cut boundary must align to silence zero-crossing (>60ms post-vowel)",
+      "severity": "CRITICAL",
+      "description": "Mid-syllable jump cut truncated acoustic tail, generating 14kHz transient click."
+    },
+    {
+      "layer": "RL Retention / Pacing",
+      "rule": "PAUSE_HAZARD_CLIFF",
+      "timestamp": "00:00:01.200 - 00:00:03.000",
+      "measuredValue": "1.80s pre-hook dead air",
+      "threshold": "Hook pause <= 0.40s",
+      "severity": "HIGH",
+      "description": "Opening hook delayed by 1.8s dead air. Hazard rate \u03bb=0.18/s (Predicted drop: 47.8%)."
+    }
+  ],
+  "verificationStatus": "ALL_INVARIANTS_PASS"
+}

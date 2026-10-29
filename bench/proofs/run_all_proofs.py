@@ -59,6 +59,13 @@ SUITES = [
         "target": "bench/proofs/run_frontier_rl_proofs.py",
         "invariants": 6,
     },
+    {
+        "id": "PROOFS_06_CARDBOARD_AI",
+        "name": "Problem #09: Cardboard AI Real Talking-Head Benchmark (CEO Saksham)",
+        "script": "run_cardboard_ai_proof.py",
+        "target": "bench/proofs/run_cardboard_ai_proof.py",
+        "invariants": 4,
+    },
 ]
 
 def run_suite(suite_info, base_dir):
