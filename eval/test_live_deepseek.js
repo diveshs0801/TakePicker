@@ -1,5 +1,5 @@
 // Test script for live DeepSeek API connection
-const apiKey = process.env.DEEPSEEK_API_KEY || "sk-1b5878c4e3344f828f356ffb3f1b0bd1";
+const apiKey = process.env.DEEPSEEK_API_KEY || "";
 const baseUrl = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
 const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 
