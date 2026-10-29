@@ -37,6 +37,7 @@ export default function Home() {
   // Cardboard AI Problem #10 Version Control state
   const [currentBranch, setCurrentBranch] = useState<string>('main');
   const [isMergeModalOpen, setIsMergeModalOpen] = useState<boolean>(false);
+  const [activeProjectId, setActiveProjectId] = useState<'project_cardboard' | 'project_collab'>('project_cardboard');
 
   // Antigravity IDE / VS Code Style Panel Open/Close States
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState<boolean>(true);
@@ -273,18 +274,33 @@ export default function Home() {
     setActiveAssetStatus('UPLOADED');
   };
 
-  // Lock active showcase video to Cardboard AI clean master cut
-  const videoSourceUrl = '/proofs/2_takepicker_auto_repaired_master.mp4';
+  // Dynamic video source and timeline based on active project
+  const videoSourceUrl =
+    activeProjectId === 'project_collab'
+      ? '/proofs/project2/p2_merged_master.mp4'
+      : '/proofs/2_takepicker_auto_repaired_master.mp4';
 
-  const effectiveTimeline = {
-    assetId: currentAsset?.id || 'cardboard-ceo-demo',
-    fps: 24,
-    clips: [
-      { id: 'c1', segmentIdx: 0, in: 0.0, out: 4.0, text: 'Scene 1: Agentic Video Architecture (Hook)', reason: 'Hook Intro' },
-      { id: 'c2', segmentIdx: 1, in: 4.0, out: 11.4, text: 'Scene 2: Multimodal First-Cut Reasoning (Saksham Aggarwal)', reason: 'Dialogue Stem' },
-      { id: 'c3', segmentIdx: 2, in: 11.4, out: 17.5, text: 'Scene 3: Closed-Loop Verification & Taste Optimization', reason: 'Clean Delivery' },
-    ],
-  };
+  const effectiveTimeline =
+    activeProjectId === 'project_collab'
+      ? {
+          assetId: 'project2-collab-master',
+          fps: 24,
+          clips: [
+            { id: 'p2_c1', segmentIdx: 0, in: 0.0, out: 4.2, text: 'Hook: High-Energy Tech Intro (Sarah)', reason: 'Scene 1 Hook' },
+            { id: 'p2_c2', segmentIdx: 1, in: 4.2, out: 8.8, text: 'Product Capabilities: AI Retake Reasoning', reason: 'Scene 2 Dialogue' },
+            { id: 'p2_c3', segmentIdx: 2, in: 8.8, out: 14.0, text: 'V2 B-Roll Cutaway: Silicon Architecture (Alex)', reason: 'Scene 3 Visual Cutaway' },
+            { id: 'p2_c4', segmentIdx: 3, in: 14.0, out: 18.2, text: 'Outro: 3-Way AST Merge Final Delivery', reason: 'Scene 4 Climax' },
+          ],
+        }
+      : {
+          assetId: currentAsset?.id || 'cardboard-ceo-demo',
+          fps: 24,
+          clips: [
+            { id: 'c1', segmentIdx: 0, in: 0.0, out: 4.0, text: 'Scene 1: Agentic Video Architecture (Hook)', reason: 'Hook Intro' },
+            { id: 'c2', segmentIdx: 1, in: 4.0, out: 11.4, text: 'Scene 2: Multimodal First-Cut Reasoning (Saksham Aggarwal)', reason: 'Dialogue Stem' },
+            { id: 'c3', segmentIdx: 2, in: 11.4, out: 17.5, text: 'Scene 3: Closed-Loop Verification & Taste Optimization', reason: 'Clean Delivery' },
+          ],
+        };
 
   return (
     <div
@@ -319,6 +335,8 @@ export default function Home() {
         onToggleRight={() => setIsRightSidebarOpen((prev) => !prev)}
         isTimelineOpen={isTimelineOpen}
         onToggleTimeline={() => setIsTimelineOpen((prev) => !prev)}
+        activeProjectId={activeProjectId}
+        onProjectChange={(pid) => setActiveProjectId(pid as any)}
       />
 
       {/* 2. Main Viewport Switcher */}
@@ -339,6 +357,7 @@ export default function Home() {
           onBranchChange={setCurrentBranch}
           onOpenMergeModal={() => setIsMergeModalOpen(true)}
           onBackToStudio={() => setCurrentView('studio')}
+          activeProjectId={activeProjectId}
         />
       ) : (
         /* Professional Broadcast Studio NLE Layout (Left Bins + Center Monitor + Right Inspector + Bottom Timeline) */

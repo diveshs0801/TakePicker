@@ -1,6 +1,6 @@
 {
   "benchmarkName": "Cardboard AI Problem #10: Version Control & 3-Way Timeline Merge Matrix",
-  "timestamp": "2026-10-29 17:25:03 UTC",
+  "timestamp": "2026-10-29 17:59:51 UTC",
   "author": "Antigravity Staff Engineer",
   "scenarios": [
     {
@@ -65,29 +65,29 @@
   "scaleBenchmarks": [
     {
       "clipCount": 100,
-      "elapsedMs": 1.42,
-      "throughputClipsPerSec": 70566,
+      "elapsedMs": 1.39,
+      "throughputClipsPerSec": 71694,
       "appliedOps": 100,
       "conflicts": 0
     },
     {
       "clipCount": 1000,
-      "elapsedMs": 38.02,
-      "throughputClipsPerSec": 26305,
+      "elapsedMs": 30.42,
+      "throughputClipsPerSec": 32876,
       "appliedOps": 1000,
       "conflicts": 0
     },
     {
       "clipCount": 5000,
-      "elapsedMs": 584.11,
-      "throughputClipsPerSec": 8560,
+      "elapsedMs": 600.61,
+      "throughputClipsPerSec": 8324,
       "appliedOps": 5000,
       "conflicts": 0
     },
     {
       "clipCount": 10000,
-      "elapsedMs": 2334.68,
-      "throughputClipsPerSec": 4283,
+      "elapsedMs": 2122.59,
+      "throughputClipsPerSec": 4711,
       "appliedOps": 10000,
       "conflicts": 0
     }

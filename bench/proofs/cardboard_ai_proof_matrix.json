@@ -6,7 +6,7 @@
   "repairedArtifact": "bench\\proofs\\videos\\cardboard_ceo_repaired.mp4",
   "preRepairScore": 64,
   "postRepairScore": 100,
-  "latencyMs": 5221.89,
+  "latencyMs": 4648.91,
   "defectsDetectedAndRepaired": [
     {
       "layer": "Physical / Signal Integrity",

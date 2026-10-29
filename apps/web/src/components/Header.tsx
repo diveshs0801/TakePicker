@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Film,
@@ -47,6 +47,8 @@ interface HeaderProps {
   onToggleRight?: () => void;
   isTimelineOpen?: boolean;
   onToggleTimeline?: () => void;
+  activeProjectId?: string;
+  onProjectChange?: (projectId: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -71,7 +73,10 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleRight,
   isTimelineOpen = true,
   onToggleTimeline,
+  activeProjectId = 'project_cardboard',
+  onProjectChange,
 }) => {
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
   return (
     <header
       style={{
@@ -131,60 +136,136 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Vertical Divider */}
         <div style={{ width: '1px', height: '18px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
 
-        {/* Project Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
+        {/* Project Selector Dropdown (Switch between Project 1 and Project 2 side-by-side) */}
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setShowProjectMenu(!showProjectMenu)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              maxWidth: '200px',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#f1f5f9',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              maxWidth: '240px',
             }}
           >
-            <span
-              style={{
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                color: '#e2e8f0',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-              title={currentAsset?.filename || 'Cardboard AI Social Reel (30s Cut)'}
-            >
-              {currentAsset?.filename?.toLowerCase().includes('birthday')
-                ? 'Cardboard AI Social Reel (30s)'
-                : currentAsset?.filename
-                  ? currentAsset.filename.replace(/\.mp4$/i, '')
-                  : 'Cardboard AI Social Reel (30s)'}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeProjectId === 'project_cardboard'
+                ? '🎬 Project 1: Cardboard AI Showcase'
+                : '👥 Project 2: Collaborative Multi-Track'}
             </span>
-          </div>
+            <ChevronDown size={13} color="#94a3b8" />
+          </button>
 
-          {/* Saved Status Indicator */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.65rem',
-              color: '#10b981',
-              fontWeight: 600,
-              padding: '1px 5px',
-              borderRadius: '999px',
-              background: 'rgba(16, 185, 129, 0.1)',
-            }}
-          >
-            <span
+          {/* Project Switcher Menu Dropdown */}
+          {showProjectMenu && (
+            <div
               style={{
-                width: '5px',
-                height: '5px',
-                borderRadius: '50%',
-                backgroundColor: '#10b981',
-                boxShadow: '0 0 5px #10b981',
+                position: 'absolute',
+                top: '32px',
+                left: 0,
+                width: '320px',
+                backgroundColor: '#131625',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                borderRadius: '8px',
+                boxShadow: '0 12px 36px rgba(0,0,0,0.8)',
+                zIndex: 100,
+                padding: '6px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
               }}
-            />
-            <span>Saved</span>
-          </div>
+            >
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', padding: '4px 8px', textTransform: 'uppercase' }}>
+                Select Active Production Project
+              </div>
+
+              {/* Project 1 Option */}
+              <div
+                onClick={() => {
+                  onProjectChange?.('project_cardboard');
+                  setShowProjectMenu(false);
+                }}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: activeProjectId === 'project_cardboard' ? 'rgba(99, 102, 241, 0.22)' : 'transparent',
+                  border: activeProjectId === 'project_cardboard' ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '0.78rem', color: '#ffffff' }}>🎬 Project 1: Cardboard AI CEO Showcase</strong>
+                  {activeProjectId === 'project_cardboard' && <span style={{ fontSize: '0.60rem', color: '#34d399', fontWeight: 800 }}>ACTIVE</span>}
+                </div>
+                <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                  4-Layer Linter Defect Injection & Closed-Loop Auto-Repair
+                </span>
+              </div>
+
+              {/* Project 2 Option */}
+              <div
+                onClick={() => {
+                  onProjectChange?.('project_collab');
+                  setShowProjectMenu(false);
+                }}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: activeProjectId === 'project_collab' ? 'rgba(168, 85, 247, 0.22)' : 'transparent',
+                  border: activeProjectId === 'project_collab' ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <strong style={{ fontSize: '0.78rem', color: '#ffffff' }}>👥 Project 2: Collaborative Multi-Track</strong>
+                  {activeProjectId === 'project_collab' && <span style={{ fontSize: '0.60rem', color: '#c084fc', fontWeight: 800 }}>ACTIVE</span>}
+                </div>
+                <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
+                  2 Editors (First Half vs Second Half) + TakePicker AI 3-Way AST Merge
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Saved Status Indicator */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '0.65rem',
+            color: '#10b981',
+            fontWeight: 600,
+            padding: '1px 5px',
+            borderRadius: '999px',
+            background: 'rgba(16, 185, 129, 0.1)',
+          }}
+        >
+          <span
+            style={{
+              width: '5px',
+              height: '5px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              boxShadow: '0 0 5px #10b981',
+            }}
+          />
+          <span>Saved</span>
         </div>
 
         {/* Undo / Redo */}

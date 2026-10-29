@@ -30,6 +30,7 @@ interface VersionGraphWorkspaceProps {
   onBranchChange: (branch: string) => void;
   onOpenMergeModal: () => void;
   onBackToStudio: () => void;
+  activeProjectId?: string;
 }
 
 export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
@@ -37,8 +38,21 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
   onBranchChange,
   onOpenMergeModal,
   onBackToStudio,
+  activeProjectId = 'project_cardboard',
 }) => {
-  const [selectedRevisionId, setSelectedRevisionId] = useState<string>('rev_11e0');
+  const isCollabProject = activeProjectId === 'project_collab';
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string>(
+    isCollabProject ? 'rev_p2_c6' : 'rev_11e0'
+  );
+
+  useEffect(() => {
+    if (activeProjectId === 'project_collab') {
+      setSelectedRevisionId('rev_p2_c6');
+    } else {
+      setSelectedRevisionId('rev_11e0');
+    }
+  }, [activeProjectId]);
+
   const [auditionMode, setAuditionMode] = useState<'after' | 'before' | 'split'>('after');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -50,14 +64,21 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const beforeVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  const branches = [
-    { id: 'b_main', name: 'main', title: 'Master Broadcast Cut', author: 'Lead Director', color: '#10b981' },
-    { id: 'b_sarah', name: 'sarah/pacing', title: 'Pacing & Dialogue Trims', author: 'Sarah (Editor)', color: '#6366f1' },
-    { id: 'b_alex', name: 'alex/sound-design', title: 'Audio Stems & B-Roll', author: 'Alex (Sound)', color: '#a855f7' },
-    { id: 'b_agent', name: 'agent/auto-tighten', title: 'AI Copilot Cut (Merged)', author: 'TakePicker Agent', color: '#f59e0b' },
-  ];
+  const branches = isCollabProject
+    ? [
+        { id: 'b_main', name: 'main', title: 'Master Production Delivery', author: 'Team Master', color: '#10b981' },
+        { id: 'b_sarah', name: 'sarah/first-half', title: 'First Half Hook & Pacing', author: 'Sarah (Editor 1)', color: '#6366f1' },
+        { id: 'b_alex', name: 'alex/second-half', title: 'Second Half B-Roll & SFX', author: 'Alex (Editor 2)', color: '#a855f7' },
+        { id: 'b_merge', name: 'agent/3way-merge', title: '3-Way AST Merge Master', author: 'TakePicker AI Copilot', color: '#f59e0b' },
+      ]
+    : [
+        { id: 'b_main', name: 'main', title: 'Master Broadcast Cut', author: 'Lead Director', color: '#10b981' },
+        { id: 'b_sarah', name: 'sarah/pacing', title: 'Pacing & Dialogue Trims', author: 'Sarah (Editor)', color: '#6366f1' },
+        { id: 'b_alex', name: 'alex/sound-design', title: 'Audio Stems & B-Roll', author: 'Alex (Sound)', color: '#a855f7' },
+        { id: 'b_agent', name: 'agent/auto-tighten', title: 'AI Copilot Cut (Merged)', author: 'TakePicker Agent', color: '#f59e0b' },
+      ];
 
-  const revisions = [
+  const project1Revisions = [
     {
       id: 'rev_9a41',
       branch: 'main',
@@ -132,13 +153,126 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
     },
   ];
 
-  const selectedRev = revisions.find((r) => r.id === selectedRevisionId) || revisions[3];
+  const project2Revisions = [
+    {
+      id: 'rev_p2_c1',
+      branch: 'main',
+      author: 'Divesh (Ingest Lead)',
+      message: 'Ingest: Raw camera A-roll footage & assets package',
+      time: '1h ago',
+      color: '#10b981',
+      videoUrl: '/proofs/project2/p2_c1_raw_ingest.mp4',
+      stats: { added: 8, deleted: 0, modified: 0 },
+      isMerge: false,
+      summary: 'Uploaded 8 media assets: 1080p 24fps camera A-roll talking head, B-roll reels, and raw audio files into TakePicker CAS.',
+      diff: {
+        hasBroll: false,
+        brollLabel: '',
+        cutDuration: 0,
+        audioBoost: 0,
+      },
+    },
+    {
+      id: 'rev_p2_c2',
+      branch: 'main',
+      author: 'Alex (Sound)',
+      message: 'Add ambient music bed on Track A2 & level dialogue',
+      time: '45m ago',
+      color: '#10b981',
+      videoUrl: '/proofs/project2/p2_c2_audio_added.mp4',
+      stats: { added: 2, deleted: 0, modified: 2 },
+      isMerge: false,
+      summary: 'Placed ambient tech synth music bed on Track A2 (-18dB under dialogue), normalized dialogue loudness to EBU R128 (-23 LUFS).',
+      diff: {
+        hasBroll: false,
+        brollLabel: '',
+        cutDuration: 0,
+        audioBoost: 3.2,
+      },
+    },
+    {
+      id: 'rev_p2_c3',
+      branch: 'main',
+      author: 'Sarah (Editor 1)',
+      message: 'Assemble 4-scene rough cut & trim initial dead-air pause',
+      time: '30m ago',
+      color: '#10b981',
+      videoUrl: '/proofs/project2/p2_c3_rough_cut.mp4',
+      stats: { added: 0, deleted: 1, modified: 4 },
+      isMerge: false,
+      summary: 'Assembled rough timeline (Hook, Capabilities, Silicon B-Roll, Outro). Pruned 1.5s pre-roll dead air pause before speech starts.',
+      diff: {
+        hasBroll: false,
+        brollLabel: '',
+        cutDuration: 1.5,
+        audioBoost: 0,
+      },
+    },
+    {
+      id: 'rev_p2_c4',
+      branch: 'sarah/first-half',
+      author: 'Sarah (Editor 1)',
+      message: 'sarah/first-half: Tighten Scene 1 & 2 hook pacing to 24fps',
+      time: '20m ago',
+      color: '#6366f1',
+      videoUrl: '/proofs/project2/p2_editor1_first_half.mp4',
+      stats: { added: 0, deleted: 3, modified: 6 },
+      isMerge: false,
+      summary: 'Editor 1 (Sarah) worked on the FIRST HALF: tightened Scene 1 hook pacing, trimmed 1.8s mid-sentence stutter, and snapped cuts to 24fps frame grid.',
+      diff: {
+        hasBroll: false,
+        brollLabel: '✂️ First-Half Hook Tightened (-1.8s dead air)',
+        cutDuration: 1.8,
+        audioBoost: 0,
+      },
+    },
+    {
+      id: 'rev_p2_c5',
+      branch: 'alex/second-half',
+      author: 'Alex (Editor 2)',
+      message: 'alex/second-half: Overlay silicon B-roll on V2 & riser SFX',
+      time: '15m ago',
+      color: '#a855f7',
+      videoUrl: '/proofs/project2/p2_editor2_second_half.mp4',
+      stats: { added: 4, deleted: 0, modified: 4 },
+      isMerge: false,
+      summary: 'Editor 2 (Alex) worked concurrently on the SECOND HALF: inserted silicon architecture B-roll cutaway on Track V2 and added high-frequency riser SFX on Track A3.',
+      diff: {
+        hasBroll: true,
+        brollLabel: '✨ +3.0s Second-Half B-Roll Cutaway on V2',
+        cutDuration: 0,
+        audioBoost: 2.8,
+      },
+    },
+    {
+      id: 'rev_p2_c6',
+      branch: 'agent/3way-merge',
+      author: 'TakePicker AI Copilot',
+      message: '3-Way AST Merge: Combine Sarah First-Half + Alex Second-Half',
+      time: 'Just now',
+      color: '#f59e0b',
+      videoUrl: '/proofs/project2/p2_merged_master.mp4',
+      stats: { added: 4, deleted: 3, modified: 14 },
+      isMerge: true,
+      summary: 'Non-Destructive 3-Way AST Merge: Merged Sarah’s First-Half hook trimming with Alex’s Second-Half B-roll & riser SFX. Resolved overlap via non-destructive Audition Lanes with 15ms raised-cosine microfades.',
+      diff: {
+        hasBroll: true,
+        brollLabel: '🔀 3-Way AST Merged: First-Half Pacing + Second-Half B-Roll + Microfades',
+        cutDuration: 1.8,
+        audioBoost: 3.2,
+      },
+    },
+  ];
+
+  const revisions = isCollabProject ? project2Revisions : project1Revisions;
+  const selectedRev = revisions.find((r) => r.id === selectedRevisionId) || revisions[revisions.length - 1];
+
+  const beforeVideoUrl = isCollabProject
+    ? '/proofs/project2/p2_c1_raw_ingest.mp4'
+    : '/proofs/1_full_defects_showcase.mp4';
 
   // Active video source based on Audition Mode
-  const currentVideoSrc =
-    auditionMode === 'before'
-      ? '/proofs/1_full_defects_showcase.mp4'
-      : selectedRev.videoUrl;
+  const currentVideoSrc = auditionMode === 'before' ? beforeVideoUrl : selectedRev.videoUrl;
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -1078,8 +1212,10 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                 Video Proof:{' '}
                 <strong style={{ color: auditionMode === 'before' ? '#f87171' : '#34d399' }}>
                   {auditionMode === 'before'
-                    ? '1_full_defects_showcase.mp4 (8 Injected Linter Defects)'
-                    : selectedRev.videoUrl.replace('/proofs/', '')}
+                    ? isCollabProject
+                      ? 'p2_c1_raw_ingest.mp4 (Raw Camera Ingest)'
+                      : '1_full_defects_showcase.mp4 (8 Injected Linter Defects)'
+                    : selectedRev.videoUrl.replace('/proofs/project2/', '').replace('/proofs/', '')}
                 </strong>
               </div>
             </div>
@@ -1224,80 +1360,178 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                   gap: '4px',
                 }}
               >
-                <div
-                  style={{
-                    width: '24%',
-                    height: '28px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.66rem',
-                    color: '#c7d2fe',
-                  }}
-                >
-                  Scene 1 (Intro Hook 4.0s)
-                </div>
+                {isCollabProject ? (
+                  <>
+                    <div
+                      style={{
+                        width: '22%',
+                        height: '28px',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.64rem',
+                        color: '#c7d2fe',
+                      }}
+                    >
+                      Scene 1: Hook Intro (4.2s)
+                    </div>
 
-                <div
-                  style={{
-                    width: '38%',
-                    height: '28px',
-                    backgroundColor: 'rgba(245, 158, 11, 0.25)',
-                    border: '1px solid #f59e0b',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.68rem',
-                    color: '#fde68a',
-                    fontWeight: 700,
-                  }}
-                >
-                  Scene 2 (Tightened Dialogue 7.4s)
-                </div>
+                    <div
+                      style={{
+                        width: '26%',
+                        height: '28px',
+                        backgroundColor: 'rgba(245, 158, 11, 0.25)',
+                        border: '1px solid #f59e0b',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.65rem',
+                        color: '#fde68a',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Scene 2: AI Retakes (4.6s)
+                    </div>
 
-                {selectedRev.diff.cutDuration > 0 && (
-                  <div
-                    style={{
-                      width: '16%',
-                      height: '28px',
-                      backgroundColor: 'rgba(244, 63, 94, 0.2)',
-                      border: '1px dashed #f43f5e',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.64rem',
-                      color: '#fca5a5',
-                      fontWeight: 800,
-                      backgroundImage:
-                        'repeating-linear-gradient(45deg, rgba(244, 63, 94, 0.15), rgba(244, 63, 94, 0.15) 4px, transparent 4px, transparent 8px)',
-                    }}
-                  >
-                    <Scissors size={11} color="#f87171" style={{ marginRight: '3px' }} />
-                    <span>-{selectedRev.diff.cutDuration}s CUT</span>
-                  </div>
+                    {selectedRev.diff.cutDuration > 0 && (
+                      <div
+                        style={{
+                          width: '14%',
+                          height: '28px',
+                          backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                          border: '1px dashed #f43f5e',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.62rem',
+                          color: '#fca5a5',
+                          fontWeight: 800,
+                          backgroundImage:
+                            'repeating-linear-gradient(45deg, rgba(244, 63, 94, 0.15), rgba(244, 63, 94, 0.15) 4px, transparent 4px, transparent 8px)',
+                        }}
+                      >
+                        <Scissors size={10} color="#f87171" style={{ marginRight: '2px' }} />
+                        <span>-{selectedRev.diff.cutDuration}s CUT</span>
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        width: '24%',
+                        height: '28px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        border: '1px solid rgba(16, 185, 129, 0.4)',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.64rem',
+                        color: '#a7f3d0',
+                      }}
+                    >
+                      Scene 3: Silicon B-Roll (5.2s)
+                    </div>
+
+                    <div
+                      style={{
+                        flex: 1,
+                        height: '28px',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.64rem',
+                        color: '#c7d2fe',
+                      }}
+                    >
+                      Scene 4: Delivery (4.2s)
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        width: '24%',
+                        height: '28px',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.66rem',
+                        color: '#c7d2fe',
+                      }}
+                    >
+                      Scene 1 (Intro Hook 4.0s)
+                    </div>
+
+                    <div
+                      style={{
+                        width: '38%',
+                        height: '28px',
+                        backgroundColor: 'rgba(245, 158, 11, 0.25)',
+                        border: '1px solid #f59e0b',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.68rem',
+                        color: '#fde68a',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Scene 2 (Tightened Dialogue 7.4s)
+                    </div>
+
+                    {selectedRev.diff.cutDuration > 0 && (
+                      <div
+                        style={{
+                          width: '16%',
+                          height: '28px',
+                          backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                          border: '1px dashed #f43f5e',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.64rem',
+                          color: '#fca5a5',
+                          fontWeight: 800,
+                          backgroundImage:
+                            'repeating-linear-gradient(45deg, rgba(244, 63, 94, 0.15), rgba(244, 63, 94, 0.15) 4px, transparent 4px, transparent 8px)',
+                        }}
+                      >
+                        <Scissors size={11} color="#f87171" style={{ marginRight: '3px' }} />
+                        <span>-{selectedRev.diff.cutDuration}s CUT</span>
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        flex: 1,
+                        height: '28px',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.66rem',
+                        color: '#c7d2fe',
+                      }}
+                    >
+                      Scene 3 (Architecture 6.1s)
+                    </div>
+                  </>
                 )}
-
-                <div
-                  style={{
-                    flex: 1,
-                    height: '28px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.66rem',
-                    color: '#c7d2fe',
-                  }}
-                >
-                  Scene 3 (Architecture 6.1s)
-                </div>
               </div>
             </div>
 
@@ -1349,6 +1583,46 @@ export const VersionGraphWorkspace: React.FC<VersionGraphWorkspaceProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Track A2 (Ambient Music Bed - Project 2) */}
+            {isCollabProject && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ width: '30px', fontSize: '0.68rem', fontWeight: 800, color: '#38bdf8', flexShrink: 0 }}>A2</span>
+                <div
+                  style={{
+                    flex: 1,
+                    height: '28px',
+                    backgroundColor: 'rgba(255,255,255,0.02)',
+                    borderRadius: '5px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '22px',
+                      backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0 10px',
+                      fontSize: '0.64rem',
+                      color: '#bae6fd',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span>🎵 Ambient Synth Music Bed (-18dB Ducked Under Dialogue)</span>
+                    <span>Continuous Multi-Track Stem</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Diff Color Legend */}
